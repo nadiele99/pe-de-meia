@@ -9,3 +9,6 @@ desktop.ini
 
 # Dependências (caso o projeto ganhe build no futuro)
 node_modules/
+
+# Configuração local do Claude Code (preview no app)
+.claude/
