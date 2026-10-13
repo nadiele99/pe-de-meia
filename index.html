@@ -17,6 +17,7 @@
                      B) MOEDA NA MEIA      — clique em [data-moeda="meia"]
                      C) PULINHO NA CARTEIRA — clique em [data-moeda="carteira"] ou na própria moeda
                      D) BOTÃO VOLTAR AO TOPO — aparece quando o Hero sai da tela
+                     E) DICA DO CADEADO — Esc fecha a dica de acesso restrito
 
   =============================================================================
   BIBLIOTECAS E DEPENDÊNCIAS: O QUE É USADO, PARA QUÊ, E O QUE INSTALAR
@@ -115,8 +116,10 @@
     PaginaHome ........................................... S
     ├─ Navbar ............................................ C  (NÃO fixa: rola com a página; botão Entrar com MoedaNaMeia)
     │    props: logoHref, links[{label, href}], entrarHref
+    │    └─ AvisoAcesso .................................. S  cadeado + dica (CSS puro; Esc via JS, parte E)
+    │         props: titulo, texto
     ├─ Hero .............................................. S
-    │  ├─ (texto) props: aviso, tituloAntes, tituloDestaque, descricao(rich), cta{label, href}
+    │  ├─ (texto) props: tituloAntes, tituloDestaque, descricao(rich), cta{label, href}
     │  └─ HeroArte ....................................... C  (alvo da MoedaNaMeia: precisa de refs para .meia e .moedas)
     │       props: pilulas[{icone, cor, texto}]   (3 pílulas flutuantes)
     ├─ SecaoSistema ...................................... S  (fundo com marca d'água; eyebrow com meia)
@@ -240,10 +243,32 @@
     .container-pdm { max-width: 1240px; margin: 0 auto; padding: 0 clamp(16px, 3.5vw, 50px); }
     .container-pdm > * { min-width: 0; }            /* evita que itens do grid estourem a largura no mobile */
     .chip-quebra { white-space: normal; line-height: 18px; }
-    /* Chip discreto: versão menor do pdm-chip para o aviso de acesso do Hero, para não
-       competir com o título "Sistema de Consulta Pé-de-Meia". */
-    .chip-discreto { font-size: 11.5px; line-height: 16px; padding: 4px 10px; gap: 5px; font-weight: 600; }
-    .chip-discreto .pdm-icon { width: 13px; height: 13px; }
+    /* ===================== CADEADO + DICA DE ACESSO  → componente AvisoAcesso (na Navbar) =====================
+       Ícone de cadeado ao lado do "Entrar". A dica (tooltip) aparece SÓ com CSS em:
+         - :hover no grupo .nav-acesso (passar o mouse no cadeado OU na própria dica:
+           dá para mover o mouse até ela sem que suma; requisito WCAG 1.4.13);
+         - :focus-within (Tab até o cadeado, ou toque no celular).
+       Acessibilidade: o botão aponta para a dica com aria-describedby, e a dica tem
+       role="tooltip". Esc fecha (script, parte E).
+       Escondida = opacity 0 + sobe 4px + visibility hidden; aparece em 180ms. */
+    .nav-acesso { position: relative; display: inline-flex; }
+    .nav-acesso__icone { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #f5dc8a; cursor: help;
+      display: grid; place-items: center; background: var(--amarelo-50); color: var(--amarelo-ink);
+      transition: background-color .2s ease, transform .2s ease; }
+    .nav-acesso__icone:hover { background: #ffefb3; }
+    .nav-acesso__icone:focus-visible { outline: 3px solid var(--azul-institucional); outline-offset: 2px; }
+    .nav-acesso__icone .pdm-icon { width: 18px; height: 18px; }
+    .nav-acesso__dica { position: absolute; z-index: 60; top: calc(100% + 10px); right: -8px; width: 248px;
+      padding: 12px 14px; border-radius: 12px; background: var(--branco); border: 1px solid var(--linha);
+      box-shadow: 0 12px 28px rgba(0,46,125,.16); color: var(--ink-muted); font: 400 13px/19px var(--font-sans); text-align: left;
+      opacity: 0; visibility: hidden; transform: translateY(-4px); pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s; }
+    .nav-acesso__dica::before { content: ""; position: absolute; top: -6px; right: 22px; width: 10px; height: 10px;
+      background: var(--branco); border-left: 1px solid var(--linha); border-top: 1px solid var(--linha); transform: rotate(45deg); } /* setinha */
+    .nav-acesso__dica strong { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
+    .nav-acesso:hover .nav-acesso__dica, .nav-acesso:focus-within .nav-acesso__dica, .nav-acesso.is-aberta .nav-acesso__dica {
+      opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity .18s ease, transform .18s ease, visibility 0s; }
+    .nav-acesso.is-fechada .nav-acesso__dica { opacity: 0; visibility: hidden; } /* Esc força fechar */
 
     /* ===================== HERO: TÍTULO  → componente Hero =====================
        "Pé-de-Meia" em azul da marca, sublinhado por um rabisco amarelo (SVG inline,
@@ -434,6 +459,7 @@
        Flutuante (afastada das bordas), mas NÃO fixa: rola com a página (regra
        .pdm-nav-wrap no <style>). "Entrar" é o único acesso ao login nesta página.
        props: logoHref, links[{label, href}] (máx. 4), entrarHref
+       filho: AvisoAcesso (cadeado ao lado do Entrar; dica ao passar o mouse/focar)
        comportamento: sem sombra de rolagem (não é fixa);
                       Entrar com data-moeda="meia" → MOEDA NA MEIA (script, parte B)
        =================================================================== -->
@@ -446,6 +472,16 @@
         <li data-item="NavLink"><a href="#dados" data-prop="href label">Fonte dos dados</a></li>
       </ul>
       <div class="pdm-nav__acoes">
+        <!-- COMPONENTE: AvisoAcesso · cadeado + dica de acesso restrito.
+             props: titulo, texto. Texto baseado no site atual ("Uso exclusivo de gestores e
+             servidores autorizados" + login por e-mail e senha). -->
+        <span class="nav-acesso" data-component="AvisoAcesso">
+          <button type="button" class="nav-acesso__icone" aria-label="Acesso restrito" aria-describedby="dica-acesso"><i data-icon="lock"></i></button>
+          <span class="nav-acesso__dica" id="dica-acesso" role="tooltip">
+            <strong data-prop="titulo">Acesso restrito</strong>
+            <span data-prop="texto">Exclusivo para gestores e servidores autorizados. Entre com o e-mail e a senha cadastrados.</span>
+          </span>
+        </span>
         <!-- TODO: trocar "#" pela URL da tela de login.
              Se o Entrar passar a fazer requisição, coloque-a em entrar() (script, parte B):
              o redirecionamento só acontece DEPOIS da moeda entrar na meia. -->
@@ -460,7 +496,7 @@
     <!-- ===================================================================
          COMPONENTE: Hero  ·  S (estático)
          Coluna de texto + HeroArte.
-         props: aviso, tituloAntes, tituloDestaque, descricao (texto rico com
+         props: tituloAntes, tituloDestaque, descricao (texto rico com
                 <strong>), cta{label, href}
          O rabisco amarelo sob tituloDestaque é decorativo (SVG fixo).
          O CTA tem data-moeda="carteira": rola até #programa e, quando a rolagem
@@ -469,8 +505,7 @@
          =================================================================== -->
     <section class="container-pdm grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-8 items-center pt-10 pb-14 lg:pt-12 lg:pb-16" data-component="Hero">
       <div>
-        <span class="pdm-chip pdm-chip--aviso chip-quebra chip-discreto" data-pdm-reveal><i data-icon="lock"></i><span data-prop="aviso">Acesso apenas para autorizados</span></span>
-        <h1 class="hero-titulo mt-6" data-pdm-reveal style="--pdm-delay:80ms">
+        <h1 class="hero-titulo" data-pdm-reveal style="--pdm-delay:80ms">
           <span data-prop="tituloAntes">Sistema de Consulta</span>
           <span class="marca"><span data-prop="tituloDestaque">Pé-de-Meia</span><svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true"><path d="M4 16 C 40 4, 70 22, 104 12 S 170 4, 204 14 S 266 20, 296 8" fill="none" stroke="var(--amarelo)" stroke-width="7" stroke-linecap="round"/></svg></span>
         </h1>
@@ -1084,6 +1119,27 @@
         var logo = document.querySelector('.pdm-nav__logo');
         if (logo) logo.focus({ preventScroll: true });       // teclado recomeça do topo
         if (history.replaceState) history.replaceState(null, '', location.pathname); // limpa o #âncora
+      });
+    }
+
+    /* -------------------------------------------------------------------
+       E) DICA DO CADEADO (AvisoAcesso)
+       -------------------------------------------------------------------
+       Mostrar/esconder é 100% CSS (:hover e :focus-within em .nav-acesso).
+       Este trecho só cuida do Esc: com a dica aberta, Esc a fecha (classe
+       is-fechada) sem tirar o foco nem o mouse do lugar (WCAG 1.4.13: dica
+       que se pode dispensar). A classe sai quando o mouse sai ou o foco muda.
+       Em React: estado "fechadaPorEsc" + onKeyDown/onMouseLeave/onBlur.
+       ------------------------------------------------------------------- */
+    var avisoAcesso = document.querySelector('.nav-acesso');
+    if (avisoAcesso) {
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') avisoAcesso.classList.add('is-fechada');
+      });
+      // rearma ao sair E ao voltar (mouse ou foco), para a dica reabrir na próxima interação
+      var reabrir = function () { avisoAcesso.classList.remove('is-fechada'); };
+      ['mouseleave', 'mouseenter', 'focusout', 'focusin'].forEach(function (tipo) {
+        avisoAcesso.addEventListener(tipo, reabrir);
       });
     }
 
