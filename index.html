@@ -510,7 +510,9 @@
           <span data-prop="tituloAntes">Sistema de Consulta</span>
           <span class="marca"><span data-prop="tituloDestaque">Pé-de-Meia</span><svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true"><path d="M4 16 C 40 4, 70 22, 104 12 S 170 4, 204 14 S 266 20, 296 8" fill="none" stroke="var(--amarelo)" stroke-width="7" stroke-linecap="round"/></svg></span>
         </h1>
-        <p class="pdm-lead mt-8" data-pdm-reveal style="--pdm-delay:160ms" data-prop="descricao">
+        <!-- descrição escondida no celular (< 640px) para poupar espaço: "hidden sm:block".
+             No celular o hero fica só com título + botão "Conheça o programa". -->
+        <p class="pdm-lead mt-8 hidden sm:block" data-pdm-reveal style="--pdm-delay:160ms" data-prop="descricao">
           Plataforma oficial da Seduc-AM para consulta de <strong class="text-ink font-semibold">elegibilidade</strong>, <strong class="text-ink font-semibold">frequência escolar</strong> e <strong class="text-ink font-semibold">status</strong> dos estudantes beneficiários do Programa Pé-de-Meia no ensino médio público do Amazonas.
         </p>
         <div class="flex flex-wrap gap-3 mt-8" data-pdm-reveal style="--pdm-delay:240ms">
