@@ -420,6 +420,19 @@
     .voltar-topo:focus-visible { outline: 3px solid var(--amarelo); outline-offset: 3px; }
     .voltar-topo svg { width: 22px; height: 22px; }
 
+    /* ===================== RODAPÉ CENTRALIZADO NO CELULAR  → componente Rodape =====================
+       Abaixo de 860px o rodapé do DS vira uma coluna só (regra do pdm.css). Aqui,
+       nesse mesmo ponto, TODOS os elementos ficam centralizados: textos, redes
+       sociais, assinatura Seduc-AM, DETIN/GETAG e a linha "Desenvolvido pelo…".
+       (Sobrescreve o alinhamento à esquerda que o pdm.css aplica nesse tamanho.) */
+    @media (max-width: 860px) {
+      .pdm-footer__grid { text-align: center; justify-items: center; }
+      .pdm-footer__social { justify-content: center; }
+      .pdm-footer__assinatura, .pdm-footer__assinatura > div { align-items: center; }
+      .pdm-footer__assinatura img.detin { margin-left: auto; margin-right: auto; }
+      .pdm-footer__dev { text-align: center !important; }
+    }
+
     /* ===================== RESPONSIVO  → distribuir nos módulos de HeroArte e Carteira ===================== */
     @media (max-width: 1023px) { .hero-arte { max-width: 520px; margin: 0 auto; } }
     @media (max-width: 480px) {
