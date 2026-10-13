@@ -505,7 +505,8 @@
          movimento reduzido, é só a âncora.
          =================================================================== -->
     <section class="container-pdm grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-8 items-center pt-16 pb-20 lg:pt-24 lg:pb-[120px]" data-component="Hero">
-      <div>
+      <!-- coluna de texto: CENTRALIZADA no celular (< 640px), alinhada à esquerda a partir de sm -->
+      <div class="text-center sm:text-left">
         <h1 class="hero-titulo" data-pdm-reveal style="--pdm-delay:80ms">
           <span data-prop="tituloAntes">Sistema de Consulta</span>
           <span class="marca"><span data-prop="tituloDestaque">Pé-de-Meia</span><svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true"><path d="M4 16 C 40 4, 70 22, 104 12 S 170 4, 204 14 S 266 20, 296 8" fill="none" stroke="var(--amarelo)" stroke-width="7" stroke-linecap="round"/></svg></span>
@@ -515,7 +516,7 @@
         <p class="pdm-lead mt-8 hidden sm:block" data-pdm-reveal style="--pdm-delay:160ms" data-prop="descricao">
           Plataforma oficial da Seduc-AM para consulta de <strong class="text-ink font-semibold">elegibilidade</strong>, <strong class="text-ink font-semibold">frequência escolar</strong> e <strong class="text-ink font-semibold">status</strong> dos estudantes beneficiários do Programa Pé-de-Meia no ensino médio público do Amazonas.
         </p>
-        <div class="flex flex-wrap gap-3 mt-8" data-pdm-reveal style="--pdm-delay:240ms">
+        <div class="flex flex-wrap justify-center sm:justify-start gap-3 mt-8" data-pdm-reveal style="--pdm-delay:240ms">
           <!-- variante CONTORNO (fundo branco + borda): o azul cheio fica reservado ao "Entrar",
                para não confundir as duas ações -->
           <a class="pdm-btn pdm-btn--contorno bg-white" href="#programa" data-prop="cta.href cta.label" data-moeda="carteira">Conheça o programa<i data-icon="arrow-right" class="pdm-icon--seta"></i></a>
