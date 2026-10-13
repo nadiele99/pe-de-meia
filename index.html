@@ -553,7 +553,9 @@
          =================================================================== -->
     <section id="programa" tabindex="-1" class="com-grafismos py-14 lg:py-20 outline-none" data-component="SecaoPrograma">
       <!-- grafismos (decorativos): X verde no alto à direita, pontilhado azul embaixo à esquerda -->
-      <svg class="grafismo text-verde" aria-hidden="true" style="right:4%; top:22px; width:28px; height:28px"><use href="#g-x"/></svg>
+      <!-- X verde: mais baixo (fora do canto superior, para não parecer botão de fechar)
+           e girado 22° para não ficar "reto" -->
+      <svg class="grafismo text-verde" aria-hidden="true" style="right:1.2%; top:58%; width:28px; height:28px; transform:rotate(22deg)"><use href="#g-x"/></svg>
       <svg class="grafismo grafismo--desktop text-azul-pdm" aria-hidden="true" style="left:1.2%; bottom:14px; width:30px; height:48px"><use href="#g-pontos"/></svg>
       <div class="container-pdm grid lg:grid-cols-[1fr_1fr] gap-6 items-stretch">
 
