@@ -495,7 +495,8 @@
 
     <!-- ===================================================================
          COMPONENTE: Hero  ·  S (estático)
-         Coluna de texto + HeroArte.
+         Coluna de texto + HeroArte. Respiro: pt-16/pb-20 (celular) e lg:pt-24/lg:pb-28
+         (desktop: 96px até a navbar e 112px até a seção "O sistema").
          props: tituloAntes, tituloDestaque, descricao (texto rico com
                 <strong>), cta{label, href}
          O rabisco amarelo sob tituloDestaque é decorativo (SVG fixo).
@@ -503,7 +504,7 @@
          termina, a moeda da carteira pula (script, parte C1). Sem JS ou com
          movimento reduzido, é só a âncora.
          =================================================================== -->
-    <section class="container-pdm grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-8 items-center pt-10 pb-14 lg:pt-12 lg:pb-16" data-component="Hero">
+    <section class="container-pdm grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-8 items-center pt-16 pb-20 lg:pt-24 lg:pb-28" data-component="Hero">
       <div>
         <h1 class="hero-titulo" data-pdm-reveal style="--pdm-delay:80ms">
           <span data-prop="tituloAntes">Sistema de Consulta</span>
