@@ -661,10 +661,11 @@
          COMPONENTE: SecaoFonteDados  ·  S
          props: eyebrow, titulo, tituloDestaque, passos[] → Passo
          Filho repetido: Passo · props: numero, titulo, texto
+         Respiro igual ao do Hero: pt-16/pb-20 (celular) e lg:pt-24/lg:pb-28 (desktop: 96px/112px).
          A linha tracejada entre os números é o ::before de .passos (CSS),
          visível só a partir de 768px. O --pdm-delay cresce 100ms por passo.
          =================================================================== -->
-    <section id="dados" class="com-grafismos bg-superficie py-14 lg:py-20" data-component="SecaoFonteDados">
+    <section id="dados" class="com-grafismos bg-superficie pt-16 pb-20 lg:pt-24 lg:pb-28" data-component="SecaoFonteDados">
       <!-- grafismos (decorativos): arcos amarelos saindo da borda direita (espelhados
            com scaleX(-1), porque o símbolo desenha a metade direita), zigue-zague verde -->
       <svg class="grafismo grafismo--desktop text-amarelo" aria-hidden="true" style="right:0; top:28px; width:64px; height:128px; transform:scaleX(-1)"><use href="#g-arcos"/></svg>
