@@ -1,0 +1,11 @@
+# Sistema operacional / editores
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+
+# Vercel (criado pelo CLI, se usado)
+.vercel
+
+# Dependências (caso o projeto ganhe build no futuro)
+node_modules/

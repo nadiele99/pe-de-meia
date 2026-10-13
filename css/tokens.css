@@ -1,0 +1,39 @@
+/* Pé-de-Meia · Seduc-AM: tokens (gerado de tokens.json do Design System) */
+:root {
+  --azul-institucional: #002e7d;
+  --azul-institucional-600: #074999;
+  --azul-pdm: #123bfe;
+  --azul-50: #eaf0ff;
+  --amarelo: #fdc80f;
+  --amarelo-600: #f7a726;
+  --amarelo-50: #fff6d6;
+  --amarelo-ink: #7a5300;
+  --verde: #00a859;
+  --verde-700: #00733d;
+  --verde-50: #e3f6ec;
+  --vermelho: #fe1b11;
+  --vermelho-700: #c21008;
+  --ink: #22325a;
+  --ink-muted: #51607d;
+  --linha: #dde3ee;
+  --superficie: #f5f7fb;
+  --branco: #ffffff;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-24: 96px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-xl: 36px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgba(15,27,51,0.06), 0 4px 16px rgba(15,27,51,0.06);
+  --shadow-card-hover: 0 2px 4px rgba(15,27,51,0.06), 0 16px 32px rgba(0,46,125,0.12);
+  --shadow-nav: 0 8px 24px rgba(0,46,125,0.10);
+  --font-display: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}

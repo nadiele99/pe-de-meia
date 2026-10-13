@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="pt-BR">
+<!--
+  =============================================================================
+  HOME · SISTEMA DE CONSULTA PÉ-DE-MEIA (Seduc-AM) · protótipo HTML
+  =============================================================================
+  COMO ESTE ARQUIVO ESTÁ ORGANIZADO
+    1. <head>      → tokens + componentes do Design System, Tailwind e o CSS da página
+    2. Navbar      → componente do DS; o botão "Entrar" dispara a MOEDA NA MEIA
+    3. Hero        → título, descrição, CTA "Conheça o programa" e a arte (uma meia)
+    4. O sistema   → 3 cards
+    5. Programa    → a CARTEIRA (a descrição fica na aba; moeda grande clicável) + pilares
+    6. Fonte dos dados → 3 passos
+    7. Rodapé      → componente do DS
+    8. <script>    → as interações, todas comentadas:
+                     A) utilitários compartilhados (moeda SVG, checagens)
+                     B) MOEDA NA MEIA      — clique em [data-moeda="meia"]
+                     C) PULINHO NA CARTEIRA — clique em [data-moeda="carteira"] ou na própria moeda
+                     D) BOTÃO VOLTAR AO TOPO — aparece quando o Hero sai da tela
+
+  =============================================================================
+  BIBLIOTECAS E DEPENDÊNCIAS: O QUE É USADO, PARA QUÊ, E O QUE INSTALAR
+  =============================================================================
+  Este protótipo roda abrindo o arquivo no navegador: nada precisa ser instalado
+  AQUI, porque o que é externo vem por CDN. Num projeto real (React, Next, Vue…)
+  os itens marcados com [INSTALAR] precisam ser instalados para funcionar.
+
+  1) Tailwind CSS 3.4.17 ............................... [INSTALAR no projeto]
+     Para quê: layout e utilitários (grid, espaçamentos, responsivo) nas classes
+               do HTML (ex.: "grid lg:grid-cols-2 gap-6 py-14").
+     Hoje:     <script src="https://cdn.tailwindcss.com/3.4.17"> (CDN, só protótipo;
+               o CDN não deve ir para produção).
+     Instalar: npm i -D tailwindcss@3.4.17 postcss autoprefixer
+               npx tailwindcss init -p
+               Copie para o tailwind.config o objeto "theme.extend" do <script>
+               "tailwind.config" no <head> (cores mapeadas para os tokens) e
+               mantenha corePlugins.preflight = false.
+     Docs:     https://v3.tailwindcss.com/docs/installation
+
+  2) Google Fonts: Inter + Plus Jakarta Sans ......... [CONFIGURAR no projeto]
+     Para quê: Inter = texto e interface; Plus Jakarta Sans = títulos (hero e seções).
+     Hoje:     @import no topo de css/pdm.css (fonts.googleapis.com).
+     No Next:  next/font/google → Inter e Plus_Jakarta_Sans, expondo as variáveis
+               --font-sans e --font-display (os nomes que os tokens usam).
+     Fora do Next: npm i @fontsource/inter @fontsource/plus-jakarta-sans
+     Docs:     https://fonts.google.com/specimen/Inter ·
+               https://fonts.google.com/specimen/Plus+Jakarta+Sans
+
+  3) Lucide Icons (licença ISC) ...................... [INSTALAR em React/Vue]
+     Para quê: todos os ícones da página (<i data-icon="nome">).
+     Hoje:     NÃO é carregada como biblioteca. Os desenhos (paths SVG) foram
+               copiados para js/pdm.js, e PeDeMeia.hidratarIcones() troca cada <i>
+               pelo SVG.
+     Instalar: React/Next → npm i lucide-react   (data-icon="calendar-check" → <CalendarCheck />)
+               Vue        → npm i lucide-vue-next
+               Outros     → npm i lucide
+     Docs:     https://lucide.dev
+
+  4) Web Animations API (element.animate) ............ NATIVA, não instala
+     Para quê: TODAS as animações da moeda (voo até a meia, descida, pulinho da
+               meia, pulinho da moeda da carteira). Parte B e C do script.
+     Docs:     https://developer.mozilla.org/docs/Web/API/Web_Animations_API
+     Obs.:     suportada em todos os navegadores atuais. Em React, use com useRef
+               (ref.current.animate(...)). Não exige Framer Motion nem outra lib.
+
+  5) IntersectionObserver API ........................ NATIVA, não instala
+     Para quê: fade-up das seções quando aparecem na tela (PeDeMeia.revelar(),
+               em js/pdm.js, atributo data-pdm-reveal).
+     Docs:     https://developer.mozilla.org/docs/Web/API/Intersection_Observer_API
+     Alternativa opcional em React: Framer Motion "whileInView" (npm i framer-motion);
+               só se o projeto já usar Framer Motion.
+
+  6) CSS transitions + prefers-reduced-motion ........ NATIVO, não instala
+     Para quê: hover de cards e botões, sombra da navbar, e desligar TODAS as
+               animações para quem pede menos movimento no sistema.
+
+  ARQUIVOS LOCAIS (Design System Pé-de-Meia · Seduc-AM; copiar para o projeto)
+    css/tokens.css → variáveis de cor, espaço, raio e sombra (geradas do tokens.json do DS)
+    css/pdm.css    → componentes do DS (classes pdm-*), @import das fontes, fade-up opt-in
+    js/pdm.js      → window.PeDeMeia: ícones Lucide embutidos, sombra da navbar, fade-up
+    assets/        → logos e meia (SVG). Em Next.js: mover para public/.
+    Design System  → https://claude.ai/artifact/6W8yWCQKeypYnzYhDnbrkF
+
+  NÃO USADAS (previstas no padrão Seduc, mas desnecessárias nesta página)
+    Anime.js, ScrollReveal, Chart.js: nenhuma está carregada nem é necessária.
+    Se uma conversão sugerir instalá-las para estas animações, não é preciso:
+    tudo foi feito com as APIs nativas acima.
+
+  PARA REAPROVEITAR AS ANIMAÇÕES DA MOEDA EM OUTRA PÁGINA
+    - Moeda na meia: copie o CSS "MOEDA (compartilhado)" + ".hero-arte" e as partes A + B do script.
+    - Pulinho na carteira: copie o CSS ".carteira" e as partes A + C do script.
+    - Marque o botão com data-moeda="meia" ou data-moeda="carteira".
+    - A estrutura de CAMADAS precisa existir (veja os comentários do hero e da carteira).
+
+  =============================================================================
+  GUIA DE PORTABILIDADE (para pessoas e IAs que vão converter este HTML para
+  React, Next.js, Vue, Angular, Svelte etc.)
+  =============================================================================
+  CONVENÇÕES DE MARCAÇÃO NO HTML
+    data-component="Nome"  → raiz de um componente. Um arquivo/componente por nome.
+                             Elementos aninhados com data-component são filhos.
+    data-item="Nome"       → item que se REPETE dentro de um componente (vira .map()
+                             sobre um array de props). Só o primeiro precisa virar
+                             template; os outros são os dados.
+    data-prop="nome"       → conteúdo VARIÁVEL (texto, href, ícone). Tudo que não tem
+                             data-prop é estrutura fixa do componente.
+    data-icon="nome"       → ícone Lucide (https://lucide.dev). Em React use o pacote
+                             lucide-react (ex.: data-icon="calendar-check" → <CalendarCheck />).
+    data-pdm-reveal        → entra com fade-up ao aparecer na tela (opcional, efeito).
+    data-moeda="meia|carteira" → botão que dispara uma animação de moeda.
+    aria-hidden="true"     → peça decorativa: não leva conteúdo nem props.
+
+  ÁRVORE DE COMPONENTES (S = estático/servidor · C = precisa de JS no navegador;
+  em Next.js App Router, os "C" levam 'use client')
+    PaginaHome ........................................... S
+    ├─ Navbar ............................................ C  (NÃO fixa: rola com a página; botão Entrar com MoedaNaMeia)
+    │    props: logoHref, links[{label, href}], entrarHref
+    ├─ Hero .............................................. S
+    │  ├─ (texto) props: aviso, tituloAntes, tituloDestaque, descricao(rich), cta{label, href}
+    │  └─ HeroArte ....................................... C  (alvo da MoedaNaMeia: precisa de refs para .meia e .moedas)
+    │       props: pilulas[{icone, cor, texto}]   (3 pílulas flutuantes)
+    ├─ SecaoSistema ...................................... S  (fundo com marca d'água; eyebrow com meia)
+    │    props: eyebrow, titulo, tituloDestaque, cards[]
+    │    └─ CardFuncionalidade (data-item) ............... S  props: icone, tom('azul'|'amarelo'|'verde'), titulo, texto
+    ├─ SecaoPrograma ..................................... S
+    │  ├─ Carteira ....................................... C  (moeda clicável + pulinho)
+    │  │    props: eyebrow, titulo, descricao
+    │  │    └─ MoedaCarteira ............................. C  (<button>; expõe pular() para o CTA do Hero)
+    │  └─ ListaPilares ................................... S
+    │       └─ Pilar (data-item) ......................... S  props: icone, tom, titulo, texto
+    ├─ SecaoFonteDados ................................... S
+    │    props: eyebrow, titulo, tituloDestaque, passos[]
+    │    └─ Passo (data-item) ............................ S  props: numero, titulo, texto
+    ├─ Rodape ............................................ S  (componente do DS)
+    │    props: marca, orgao, redes[{rede, href}], direitos, contato, endereco(linhas[])
+    ├─ VoltarAoTopo ...................................... C  botão fixo; aparece quando o Hero
+    │                                                          sai da tela (script, parte D). Sem props.
+    └─ Grafismo (usado em HeroArte e nas seções) ......... S  decorativo, aria-hidden
+         props: forma('x'|'pontos'|'zigue'|'arcos'|'circulos'), cor (classe text-*),
+                posição/tamanho (style), somenteDesktop (classe grafismo--desktop)
+         Os desenhos estão na "BIBLIOTECA DE GRAFISMOS" (<symbol>) no início do <body>.
+
+  ESTADO E EFEITOS → EQUIVALENTE EM REACT
+    Navbar                     → NÃO é fixa nesta página (position: relative). Não portar
+                                  PeDeMeia.navScroll / sombra ao rolar. Se um dia voltar a
+                                  ser fixa: position: sticky + hook useNavScroll(ref).
+    PeDeMeia.revelar()         → hook useReveal(ref) com IntersectionObserver, ou Framer
+                                  Motion whileInView. Respeitar prefers-reduced-motion.
+    PeDeMeia.hidratarIcones()  → NÃO portar: substituir por componentes lucide-react.
+    animarMoedaNaMeia (B)      → hook useMoedaNaMeia({ meiaRef, camadaRef }) que retorna
+                                  animar(ev): Promise<void>. O onClick do Entrar faz
+                                  Promise.all([animar(ev), entrar()]) e só DEPOIS navega
+                                  (ver "ORDEM OBRIGATÓRIA" no script, parte B). A moeda voadora pode ser
+                                  criada via document.createElement (como aqui) ou via
+                                  portal (createPortal) com estado; a lógica de coordenadas
+                                  e element.animate() continua igual.
+                                  Navbar e HeroArte estão em ramos diferentes: compartilhar
+                                  as refs por Context (ex.: MoedaContext) ou por um store.
+    pularMoedaCarteira (C)     → MoedaCarteira com useRef + element.animate(); a trava
+                                  "pulando" vira useRef<boolean> (não useState: não precisa
+                                  re-renderizar).
+    observador C3 (moeda aparece) → useEffect + IntersectionObserver no ref da moeda (threshold 0.6,
+                                  rootMargin -8% embaixo), ou useInView do Framer Motion. Pula 1x por
+                                  entrada; silenciado enquanto o CTA do Hero está rolando (ctaEmAndamento).
+    moedaNaCarteira (C1)       → o CTA do Hero chama pular() depois da rolagem acabar.
+                                  Compartilhar pular() por Context ou useImperativeHandle.
+                                  Em Next, <Link href="#programa"> + scroll-behavior:smooth
+                                  no CSS global mantém o comportamento.
+
+  ESTILOS → ONDE COLOCAR NO PROJETO
+    css/tokens.css             → CSS global (variáveis :root). Tokens também no tailwind.config
+                                  (mapa no <script> logo abaixo, "tailwind.config").
+    css/pdm.css                → CSS global do DS (classes pdm-*), ou CSS Module por componente.
+    <style> desta página       → cada bloco está marcado com o componente a que pertence
+                                  (ex.: "HERO: ARTE COM UMA MEIA" → HeroArte.module.css).
+    Classes Tailwind no HTML   → mantêm-se iguais (className).
+
+  ASSETS (pasta assets/ → public/ em Next.js)
+    pe-de-meia-logo.svg (Navbar) · pe-de-meia-meia.svg (HeroArte) · pe-de-meia-simbolo.svg (favicon)
+    rodape-ondas.svg, seduc-am-branco.svg, detin-getag-branco.svg (Rodape)
+    marca-dagua.svg (fundo da SecaoSistema; gerador: marca-dagua.gerador.js, só para regerar)
+    Moeda: SVG inline (constante SVG_MOEDA no script e <svg> na MoedaCarteira) → virar um
+    componente <MoedaSvg /> reaproveitado pelos dois.
+
+  REGRAS QUE NÃO PODEM SE PERDER NA CONVERSÃO
+    - ENTRAR: a navegação/resultado do login acontece SÓ DEPOIS da animação da moeda
+      (Promise.all([animação, requisição]) → depois redireciona ou mostra erro).
+      A requisição começa em paralelo; o que espera é a navegação. Nunca redirecione
+      direto no clique nem assim que a API responder: a microinteração se perde.
+      Ponto de integração já pronto no script, parte B: entrar() / concluirEntrar() /
+      falharEntrar().
+    - Ordem de camadas (z-index) da HeroArte e da Carteira: a moeda fica ATRÁS da meia/aba.
+    - transform-origin da .meia (50% 90%) e da .carteira__moeda (50% 100%): definem o "pulinho".
+    - Sem animação com prefers-reduced-motion: reduce (os links funcionam normalmente).
+    - Animar só transform/opacity.
+  =============================================================================
+-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consulta Pé-de-Meia · Seduc-AM</title>
+  <meta name="description" content="Plataforma oficial para consulta de elegibilidade, frequência escolar e status dos estudantes beneficiários do Programa Pé-de-Meia no Amazonas.">
+  <link rel="icon" href="assets/pe-de-meia-simbolo.svg">
+
+  <!-- Design System Pé-de-Meia · Seduc-AM: tokens (variáveis CSS) + componentes (classes pdm-*) -->
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/pdm.css">
+
+  <!-- Tailwind CSS 3.4.17 (só layout/utilitários). As cores do Tailwind apontam para os tokens do DS.
+       preflight desligado para não sobrescrever os estilos base do DS. -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      corePlugins: { preflight: false },
+      theme: { extend: {
+        colors: {
+          'azul-institucional': 'var(--azul-institucional)', 'azul-pdm': 'var(--azul-pdm)', 'azul-50': 'var(--azul-50)',
+          amarelo: 'var(--amarelo)', 'amarelo-600': 'var(--amarelo-600)', 'amarelo-50': 'var(--amarelo-50)', 'amarelo-ink': 'var(--amarelo-ink)',
+          verde: 'var(--verde)', 'verde-700': 'var(--verde-700)', 'verde-50': 'var(--verde-50)',
+          ink: 'var(--ink)', 'ink-muted': 'var(--ink-muted)', linha: 'var(--linha)', superficie: 'var(--superficie)'
+        },
+        fontFamily: { display: 'var(--font-display)', sans: 'var(--font-sans)' },
+        borderRadius: { xl2: 'var(--radius-xl)', lg2: 'var(--radius-lg)' }
+      } }
+    };
+  </script>
+
+  <style>
+    /* ===================== BASE DA PÁGINA  → CSS global ===================== */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 24px; } /* respiro no topo ao pular para uma âncora */
+
+    /* NAVBAR NÃO FIXA nesta página: o DS (pdm.css) deixa .pdm-nav-wrap como sticky;
+       aqui ela volta ao fluxo normal e rola junto com o conteúdo. Mantém o visual
+       flutuante (margem de 20–50px das bordas). Para fixar de novo, apague esta regra. */
+    .pdm-nav-wrap { position: relative; }
+    body { overflow-x: hidden; }
+    img { max-width: 100%; display: block; }
+    h1, h2, h3, p { margin: 0; }
+    .container-pdm { max-width: 1240px; margin: 0 auto; padding: 0 clamp(16px, 3.5vw, 50px); }
+    .container-pdm > * { min-width: 0; }            /* evita que itens do grid estourem a largura no mobile */
+    .chip-quebra { white-space: normal; line-height: 18px; }
+    /* Chip discreto: versão menor do pdm-chip para o aviso de acesso do Hero, para não
+       competir com o título "Sistema de Consulta Pé-de-Meia". */
+    .chip-discreto { font-size: 11.5px; line-height: 16px; padding: 4px 10px; gap: 5px; font-weight: 600; }
+    .chip-discreto .pdm-icon { width: 13px; height: 13px; }
+
+    /* ===================== HERO: TÍTULO  → componente Hero =====================
+       "Pé-de-Meia" em azul da marca, sublinhado por um rabisco amarelo (SVG inline,
+       autoral, inspirado na referência Spark Kids). Ajuste a curva no atributo d do <path>. */
+    .hero-titulo { font: 800 clamp(38px, 5.4vw, 62px)/1.04 var(--font-display); letter-spacing: -0.025em; color: var(--ink); }
+    .hero-titulo .marca { position: relative; color: var(--azul-pdm); white-space: nowrap; }
+    .hero-titulo .marca svg { position: absolute; left: -2%; bottom: -0.22em; width: 104%; height: .34em; overflow: visible; }
+
+    /* ===================== HERO: ARTE COM UMA MEIA  → componente HeroArte =====================
+       CAMADAS (z-index), da mais funda para a mais à frente:
+         1  .disco-claro, .laje (bloco azul) e .meia-lua-verde ... cenário
+         2  .moedas ............................................... onde a moeda fica na ETAPA FINAL
+         3  .meia ................................................. a meia (fica NA FRENTE da moeda)
+         4  .flutua (pílulas) ..................................... mensagens por cima de tudo
+       É essa ordem que faz a meia "engolir" a moeda: a moeda desce na camada 2
+       e a meia, na camada 3, a cobre. isolation:isolate prende esses z-index
+       dentro da arte, sem interferir no resto da página. */
+    .hero-arte { position: relative; isolation: isolate; height: 440px; width: 100%; }
+    /* LAJE "DIGITAL" (referência: fundo azul com grade e círculos concêntricos)
+       - grade: duas linear-gradient de 1px (horizontal + vertical), passo de 32px,
+         branco a 8%: lembra papel milimetrado / tela digital, sem competir com a meia;
+       - .laje__circulos: círculos concêntricos (símbolo #g-circulos), canto superior esquerdo;
+       - .laje__zigue: zigue-zague duplo branco (símbolo #g-zigue), canto inferior direito.
+       Ajuste a intensidade no alfa (.08) e o tamanho da grade no background-size. */
+    .hero-arte .laje { position: absolute; z-index: 1; right: 0; top: 72px; width: 78%; height: 330px; border-radius: var(--radius-xl); overflow: hidden;
+      background-color: var(--azul-institucional);
+      background-image: linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+      background-size: 32px 32px; background-position: -1px -1px; }
+    .hero-arte .laje__circulos { position: absolute; left: -70px; top: -60px; width: 260px; height: 260px; color: rgba(255,255,255,.16); }
+    .hero-arte .laje__zigue { position: absolute; right: 26px; bottom: 26px; width: 84px; height: 26px; color: rgba(255,255,255,.85); }
+
+    /* ===================== GRAFISMOS  → componente Grafismo =====================
+       Formas decorativas espalhadas pela home (referências: X, pontilhado,
+       zigue-zague, arcos concêntricos). Cada forma é um <symbol> desenhado UMA vez
+       na "biblioteca de grafismos" (<svg> oculto no início do <body>) e reusado com
+       <svg class="grafismo ..."><use href="#g-..."/></svg>.
+       - Cor: currentColor → a cor vem da classe de texto (text-amarelo, text-verde…).
+       - Posição: absoluta, em relação à seção (.com-grafismos tem position:relative).
+       - pointer-events:none e aria-hidden: não atrapalham cliques nem leitores de tela.
+       - .grafismo--desktop: some abaixo de 768px para não poluir o celular.
+       Em React: um componente <Grafismo forma="x" className="..."/> que renderiza o <use>. */
+    /* ===================== MARCA D'ÁGUA  → componente SecaoSistema =====================
+       Padrão "impressão digital" (cristas em redemoinho, com falhas) cobrindo TODA a
+       seção cinza "O sistema". Bem suave de propósito: textura, não pode competir com o texto.
+       Arquivo: assets/marca-dagua.svg (ladrilho 640×640 que se repete sem emenda;
+       azul-pdm a 2,5% de opacidade, já embutido no SVG). Gerador: assets/marca-dagua.gerador.js
+       (node assets/marca-dagua.gerador.js assets/marca-dagua.svg).
+       Fica num ::before (z-index 0), atrás do conteúdo; não recebe clique.
+       Ajustes: tamanho do desenho no background-size; intensidade no stroke-opacity do SVG
+       ou na opacity abaixo. */
+    .marca-dagua::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+      background: url("assets/marca-dagua.svg") 0 0 / 640px 640px repeat; opacity: 1; }
+
+    /* EYEBROW COM MEIA: troca o tracinho amarelo do pdm-eyebrow pela meia do logo
+       (mesma meia da animação da moeda). Proporção do SVG: 156×278. */
+    .pdm-eyebrow--meia::before { width: 12px; height: 22px; border-radius: 0;
+      background: url("assets/pe-de-meia-meia.svg") center / contain no-repeat; }
+
+    .com-grafismos { position: relative; }
+    .com-grafismos > .container-pdm { position: relative; z-index: 1; }
+    .grafismo { position: absolute; z-index: 0; pointer-events: none; overflow: visible; }
+    @media (max-width: 767px) { .grafismo--desktop { display: none; } }
+    .hero-arte .disco-claro { position: absolute; z-index: 1; left: 2%; bottom: 0; width: 150px; height: 150px; border-radius: 50%; background: var(--azul-50); }
+    .hero-arte .meia-lua-verde { position: absolute; z-index: 1; right: 12%; bottom: 0; width: 112px; height: 56px; border-radius: 112px 112px 0 0; background: var(--verde); }
+    .hero-arte .moedas { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
+    /* transform-origin perto do pé: o "pulinho" da meia (squash and stretch) parte de baixo */
+    .hero-arte .meia { position: absolute; z-index: 3; left: 44%; top: 8px; height: 380px; width: auto; transform-origin: 50% 90%; filter: drop-shadow(0 18px 24px rgba(0,20,60,.25)); }
+    .hero-arte .flutua { position: absolute; z-index: 4; }
+    .hero-arte .f1 { left: 0; top: 120px; transform: rotate(-4deg); }
+    .hero-arte .f2 { left: 8%; top: 200px; transform: rotate(3deg); }
+    .hero-arte .f3 { right: 3%; top: 96px; transform: rotate(-2deg); }
+    .hero-arte .pdm-chip { font-size: 14px; padding: 10px 16px; }
+
+    /* ===================== MOEDA (compartilhado)  → MoedaSvg / hook useMoedaNaMeia =====================
+       Elemento criado via JS (função criarMoeda) para as duas animações.
+       44×44px, desenho SVG autoral nas cores amarelo/amarelo-600.
+       will-change:transform deixa o navegador animar na GPU (só transform muda). */
+    .moeda-voo { width: 44px; height: 44px; left: 0; top: 0; pointer-events: none; will-change: transform; }
+    .moeda-voo svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 4px 6px rgba(0,20,60,.25)); }
+
+    /* ===================== CARTEIRA  → componentes Carteira e MoedaCarteira =====================
+       Carteira montada só com CSS. A DESCRIÇÃO DO PROGRAMA FICA NA ABA (frente).
+       CAMADAS (z-index), da mais funda para a mais à frente:
+         1  .carteira__fundo .... parte de trás (amarelo-600), mais alta que a aba:
+                                  a sobra no topo é a "boca" da carteira
+            .carteira__fenda .... risco escuro na boca (sombra da abertura)
+         2  .carteira__moeda .... moeda GRANDE de destaque, metade dentro, metade fora.
+                                  É ela que dá o PULINHO (script, parte C), ao clicar
+                                  em "Conheça o programa" ou nela mesma
+         3  .carteira__aba ...... frente com o texto; cobre a metade de baixo da moeda
+         4  .carteira__fecho .... alça azul com botão de pressão, por cima da aba
+       --boca: altura da sobra do fundo acima da aba. A moeda se reposiciona sozinha
+       (o top dela é calculado a partir de --boca). */
+    .carteira { --boca: 64px; position: relative; isolation: isolate; padding-top: var(--boca); height: 100%; }
+    .carteira__fundo { position: absolute; z-index: 1; inset: 0; border-radius: var(--radius-xl); background: var(--amarelo-600); }
+    .carteira__fenda { position: absolute; z-index: 1; top: 26px; left: 10%; width: 52%; height: 10px; border-radius: var(--radius-pill); background: rgba(15,27,51,.32); }
+    /* MOEDA DE DESTAQUE: metade dentro, metade fora da carteira.
+       --moeda: diâmetro. top = --boca − metade da moeda → o CENTRO da moeda fica
+       exatamente na borda de cima da aba: a metade de baixo some atrás da aba e a de
+       cima sobra para fora (passando inclusive da borda do fundo da carteira).
+       É um <button>: clicar nela dispara o mesmo pulinho (script, parte C).
+       transform-origin na base: o pulinho achata a partir de baixo. */
+    .carteira__moeda { --moeda: 184px; position: absolute; z-index: 2; top: calc(var(--boca) - var(--moeda) / 2); left: 58%;
+      width: var(--moeda); height: var(--moeda); padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer;
+      transform-origin: 50% 100%; will-change: transform; }
+    .carteira__moeda:focus-visible { outline: 3px solid var(--azul-institucional); outline-offset: 4px; }
+    .carteira__moeda svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 6px 10px rgba(120,70,0,.3)); }
+    @media (max-width: 480px) { .carteira__moeda { --moeda: 128px; left: 52%; } }
+    .carteira__aba { position: relative; z-index: 3; height: 100%; border-radius: var(--radius-xl); background: var(--amarelo); color: var(--ink);
+      box-shadow: 0 -6px 14px rgba(120,70,0,.18);                   /* sombra para cima: separa a aba do fundo */
+      transform-origin: 50% 0; }                                      /* o "pulinho" da aba parte da borda de cima */
+    .carteira__costura { position: absolute; inset: 12px; border: 2px dashed rgba(15,27,51,.22); border-radius: calc(var(--radius-xl) - 10px); pointer-events: none; } /* costura tracejada */
+    .carteira__fecho { position: absolute; z-index: 4; right: 0; top: calc(var(--boca) + 46%); width: 68px; height: 46px;
+      border-radius: 23px 0 0 23px; background: var(--azul-institucional); display: grid; place-items: center; }
+    .carteira__fecho span { width: 16px; height: 16px; border-radius: 50%; background: var(--amarelo); box-shadow: 0 0 0 4px rgba(255,255,255,.18); transition: transform .2s; }
+    .eyebrow-escuro { color: var(--ink); }
+    .eyebrow-escuro::before { background: var(--azul-institucional); }
+
+    /* ===================== PILARES  → componente ListaPilares / Pilar ===================== */
+    .pilar { display: flex; gap: 14px; align-items: flex-start; }
+    .pilar .pdm-card__icone { width: 40px; height: 40px; margin: 0; flex: none; }
+    .pilar .pdm-card__icone .pdm-icon { width: 20px; height: 20px; }
+
+    /* ===================== PASSOS  → componente SecaoFonteDados / Passo =====================
+       A linha tracejada que liga os números é um ::before (só a partir de 768px). */
+    .passo-num { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--azul-institucional); color: #fff; font: 700 14px/1 var(--font-sans); }
+    .passos li { position: relative; }
+    @media (min-width: 768px) {
+      .passos::before { content: ""; position: absolute; top: 16px; left: 16px; right: 16px; height: 2px; background: repeating-linear-gradient(90deg, #b9c4d8 0 8px, transparent 8px 14px); }
+    }
+
+    /* ===================== VOLTAR AO TOPO  → componente VoltarAoTopo =====================
+       Botão redondo FIXO no canto inferior direito (mesmo recuo lateral da navbar).
+       Escondido por padrão; o script (parte D) adiciona .is-visivel quando o hero
+       sai totalmente da tela, e remove quando ele volta.
+       Escondido = opacity 0 + desce 12px + encolhe (scale .9) + visibility hidden
+       (não recebe clique nem foco). Transição de 250ms só em opacity/transform.
+       Cores: mesmo gradiente do botão primário do DS; foco com anel amarelo. */
+    .voltar-topo { position: fixed; z-index: 40; right: clamp(16px, 3.5vw, 50px); bottom: 24px;
+      width: 52px; height: 52px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+      color: var(--branco); background: linear-gradient(135deg, var(--azul-institucional-600), var(--azul-institucional));
+      box-shadow: 0 10px 24px rgba(0,46,125,.28);
+      opacity: 0; visibility: hidden; transform: translateY(12px) scale(.9);
+      transition: opacity .25s ease, transform .25s ease, visibility 0s linear .25s; }
+    .voltar-topo.is-visivel { opacity: 1; visibility: visible; transform: none;
+      transition: opacity .25s ease, transform .25s ease, visibility 0s; }
+    .voltar-topo:hover { transform: translateY(-3px); }                 /* sobe um pouco no hover */
+    .voltar-topo:focus-visible { outline: 3px solid var(--amarelo); outline-offset: 3px; }
+    .voltar-topo svg { width: 22px; height: 22px; }
+
+    /* ===================== RESPONSIVO  → distribuir nos módulos de HeroArte e Carteira ===================== */
+    @media (max-width: 1023px) { .hero-arte { max-width: 520px; margin: 0 auto; } }
+    @media (max-width: 480px) {
+      .hero-arte { height: 360px; }
+      .hero-arte .laje { top: 60px; height: 270px; }
+      .hero-arte .meia { height: 300px; left: 40%; }
+      .hero-arte .disco-claro { width: 110px; height: 110px; }
+      .hero-arte .f1 { top: 96px; } .hero-arte .f2 { top: 168px; left: 0; } .hero-arte .f3 { display: none; }
+      .carteira__fecho { width: 52px; height: 40px; }
+    }
+  </style>
+</head>
+<body class="bg-white" data-component="PaginaHome">
+
+  <!-- ===================================================================
+       BIBLIOTECA DE GRAFISMOS (SVG autoral, inspirado nas referências da pasta)
+       Cada <symbol> é uma forma desenhada UMA vez e reutilizada com
+       <svg><use href="#id"/></svg>. Todas usam currentColor (cor via classe).
+         #g-x        X grosso de pontas arredondadas
+         #g-pontos   pontilhado: 2 colunas × 4 linhas de círculos vazados
+         #g-zigue    zigue-zague duplo
+         #g-arcos    arcos concêntricos (metade direita de 4 círculos)
+         #g-circulos círculos concêntricos completos (usado na laje do hero)
+       Em React: exportar cada forma como componente (ou um <Grafismo forma="x"/>);
+       este <svg> oculto deixa de ser necessário.
+       =================================================================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="g-x" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/></symbol>
+    <symbol id="g-pontos" viewBox="0 0 30 48"><g fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="5" r="3.2"/><circle cx="25" cy="5" r="3.2"/><circle cx="5" cy="17" r="3.2"/><circle cx="25" cy="17" r="3.2"/><circle cx="5" cy="29" r="3.2"/><circle cx="25" cy="29" r="3.2"/><circle cx="5" cy="41" r="3.2"/><circle cx="25" cy="41" r="3.2"/></g></symbol>
+    <symbol id="g-zigue" viewBox="0 0 84 26"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,10 9,3 16,10 23,3 30,10 37,3 44,10 51,3 58,10 65,3 72,10 79,3"/><polyline points="2,23 9,16 16,23 23,16 30,23 37,16 44,23 51,16 58,23 65,16 72,23 79,16"/></g></symbol>
+    <symbol id="g-arcos" viewBox="0 0 64 128"><g fill="none" stroke="currentColor" stroke-width="3.5"><circle cx="0" cy="64" r="22"/><circle cx="0" cy="64" r="34"/><circle cx="0" cy="64" r="46"/><circle cx="0" cy="64" r="58"/></g></symbol>
+    <symbol id="g-circulos" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="60" cy="60" r="18"/><circle cx="60" cy="60" r="28"/><circle cx="60" cy="60" r="38"/><circle cx="60" cy="60" r="48"/><circle cx="60" cy="60" r="58"/></g></symbol>
+  </svg>
+
+  <!-- ===================================================================
+       COMPONENTE: Navbar  ·  C (precisa de JS)  ·  DS: Navbar, variante clara
+       Flutuante (afastada das bordas), mas NÃO fixa: rola com a página (regra
+       .pdm-nav-wrap no <style>). "Entrar" é o único acesso ao login nesta página.
+       props: logoHref, links[{label, href}] (máx. 4), entrarHref
+       comportamento: sem sombra de rolagem (não é fixa);
+                      Entrar com data-moeda="meia" → MOEDA NA MEIA (script, parte B)
+       =================================================================== -->
+  <div class="pdm-nav-wrap" data-component="Navbar">
+    <nav class="pdm-nav" id="nav" aria-label="Principal">
+      <a class="pdm-nav__logo" href="#topo" data-prop="logoHref" aria-label="Pé-de-Meia: início"><img src="assets/pe-de-meia-logo.svg" alt="Pé-de-Meia, A poupança do ensino médio"></a>
+      <ul class="pdm-nav__links" data-prop="links">
+        <li data-item="NavLink"><a href="#sistema" data-prop="href label">O sistema</a></li>
+        <li data-item="NavLink"><a href="#programa" data-prop="href label">O programa</a></li>
+        <li data-item="NavLink"><a href="#dados" data-prop="href label">Fonte dos dados</a></li>
+      </ul>
+      <div class="pdm-nav__acoes">
+        <!-- TODO: trocar "#" pela URL da tela de login.
+             Se o Entrar passar a fazer requisição, coloque-a em entrar() (script, parte B):
+             o redirecionamento só acontece DEPOIS da moeda entrar na meia. -->
+
+        <a class="pdm-btn pdm-btn--primario" href="#" data-prop="entrarHref" data-moeda="meia"><i data-icon="log-in"></i>Entrar</a>
+      </div>
+    </nav>
+  </div>
+
+  <main id="topo">
+
+    <!-- ===================================================================
+         COMPONENTE: Hero  ·  S (estático)
+         Coluna de texto + HeroArte.
+         props: aviso, tituloAntes, tituloDestaque, descricao (texto rico com
+                <strong>), cta{label, href}
+         O rabisco amarelo sob tituloDestaque é decorativo (SVG fixo).
+         O CTA tem data-moeda="carteira": rola até #programa e, quando a rolagem
+         termina, a moeda da carteira pula (script, parte C1). Sem JS ou com
+         movimento reduzido, é só a âncora.
+         =================================================================== -->
+    <section class="container-pdm grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-8 items-center pt-10 pb-14 lg:pt-12 lg:pb-16" data-component="Hero">
+      <div>
+        <span class="pdm-chip pdm-chip--aviso chip-quebra chip-discreto" data-pdm-reveal><i data-icon="lock"></i><span data-prop="aviso">Acesso apenas para autorizados</span></span>
+        <h1 class="hero-titulo mt-6" data-pdm-reveal style="--pdm-delay:80ms">
+          <span data-prop="tituloAntes">Sistema de Consulta</span>
+          <span class="marca"><span data-prop="tituloDestaque">Pé-de-Meia</span><svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true"><path d="M4 16 C 40 4, 70 22, 104 12 S 170 4, 204 14 S 266 20, 296 8" fill="none" stroke="var(--amarelo)" stroke-width="7" stroke-linecap="round"/></svg></span>
+        </h1>
+        <p class="pdm-lead mt-8" data-pdm-reveal style="--pdm-delay:160ms" data-prop="descricao">
+          Plataforma oficial da Seduc-AM para consulta de <strong class="text-ink font-semibold">elegibilidade</strong>, <strong class="text-ink font-semibold">frequência escolar</strong> e <strong class="text-ink font-semibold">status</strong> dos estudantes beneficiários do Programa Pé-de-Meia no ensino médio público do Amazonas.
+        </p>
+        <div class="flex flex-wrap gap-3 mt-8" data-pdm-reveal style="--pdm-delay:240ms">
+          <a class="pdm-btn pdm-btn--primario" href="#programa" data-prop="cta.href cta.label" data-moeda="carteira">Conheça o programa<i data-icon="arrow-right" class="pdm-icon--seta"></i></a>
+        </div>
+      </div>
+
+      <!-- =================================================================
+           COMPONENTE: HeroArte  ·  C (alvo da MOEDA NA MEIA)  ·  decorativo
+           Uma meia (peça oficial do logo) sobre a laje azul + 3 pílulas.
+           props: pilulas[{icone, cor('verde-700'|'azul-pdm'|'amarelo-ink'), texto}]
+           refs necessárias em React: .meia (meiaRef) e .moedas (camadaRef).
+           CAMADAS (z-index) descritas no CSS ".hero-arte". Não remova .moedas:
+           é para lá que a moeda vai na etapa final, atrás da meia.
+           ================================================================= -->
+      <div class="hero-arte" aria-hidden="true" data-pdm-reveal style="--pdm-delay:120ms" data-component="HeroArte">
+        <div class="disco-claro"></div>                                    <!-- camada 1: cenário -->
+        <!-- laje "digital": grade no CSS + círculos concêntricos + zigue-zague -->
+        <div class="laje">                                                 <!-- camada 1: cenário -->
+          <svg class="laje__circulos"><use href="#g-circulos"/></svg>
+          <svg class="laje__zigue"><use href="#g-zigue"/></svg>
+        </div>
+        <!-- grafismos da arte (camada 1, atrás da meia e das pílulas) -->
+        <svg class="grafismo text-amarelo" aria-hidden="true" style="z-index:1; right:4%; top:18px; width:34px; height:34px"><use href="#g-x"/></svg>
+        <svg class="grafismo text-verde" aria-hidden="true" style="z-index:1; left:30%; top:16px; width:30px; height:48px"><use href="#g-pontos"/></svg>
+        <div class="meia-lua-verde"></div>                                 <!-- camada 1: cenário -->
+        <div class="moedas"></div>                                         <!-- camada 2: moeda na etapa final -->
+        <img class="meia" src="assets/pe-de-meia-meia.svg" alt="">        <!-- camada 3: a meia, na frente -->
+        <!-- camada 4: pílulas (f1, f2, f3 = posições fixas no CSS) -->
+        <span class="flutua f1 pdm-chip pdm-chip--branco" data-item="Pilula"><span class="text-verde-700" data-prop="cor"><i data-icon="calendar-check"></i></span><span data-prop="texto">Frequência mensal</span></span>
+        <span class="flutua f2 pdm-chip pdm-chip--branco" data-item="Pilula"><span class="text-azul-pdm" data-prop="cor"><i data-icon="circle-check"></i></span><span data-prop="texto">Elegibilidade</span></span>
+        <span class="flutua f3 pdm-chip pdm-chip--branco" data-item="Pilula"><span class="text-amarelo-ink" data-prop="cor"><i data-icon="refresh-cw"></i></span><span data-prop="texto">Dados do SGP</span></span>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         COMPONENTE: SecaoSistema  ·  S
+         props: eyebrow, titulo, tituloDestaque (vai em <em>, pintado de azul-pdm),
+                cards[] → CardFuncionalidade
+         Filho repetido: CardFuncionalidade (DS) · props: icone, tom, titulo, texto
+           tom → classe do tile: 'azul' = pdm-card__icone · 'amarelo' = --amarelo · 'verde' = --verde
+         O atraso do fade-up (--pdm-delay) cresce 80ms por card: index * 80.
+         =================================================================== -->
+    <section id="sistema" class="com-grafismos marca-dagua bg-superficie py-14 lg:py-20" data-component="SecaoSistema">
+      <!-- fundo: marca d'água orgânica (classe marca-dagua, ver CSS "MARCA D'ÁGUA") -->
+      <div class="container-pdm">
+        <header class="max-w-2xl" data-pdm-reveal>
+          <span class="pdm-eyebrow pdm-eyebrow--meia" data-prop="eyebrow">O sistema</span>
+          <h2 class="pdm-titulo"><span data-prop="titulo">O que você encontra</span> <em data-prop="tituloDestaque">na consulta</em></h2>
+        </header>
+
+        <div class="grid md:grid-cols-3 gap-6 mt-10" data-prop="cards">
+          <article class="pdm-card" data-pdm-reveal data-item="CardFuncionalidade">
+            <div class="pdm-card__icone" data-prop="tom"><i data-icon="search"></i></div>
+            <h3 class="pdm-card__titulo" data-prop="titulo">Consulta avançada</h3>
+            <p class="pdm-card__texto" data-prop="texto">Busque estudantes por CPF, nome, escola, status de elegibilidade e ano letivo.</p>
+          </article>
+          <article class="pdm-card" data-pdm-reveal style="--pdm-delay:80ms" data-item="CardFuncionalidade">
+            <div class="pdm-card__icone pdm-card__icone--amarelo" data-prop="tom"><i data-icon="calendar-check"></i></div>
+            <h3 class="pdm-card__titulo" data-prop="titulo">Frequência e elegibilidade</h3>
+            <p class="pdm-card__texto" data-prop="texto">Frequência mensal atualizada pelo Sistema Gestão Presente (SGP) e status de elegibilidade de cada estudante.</p>
+          </article>
+          <article class="pdm-card" data-pdm-reveal style="--pdm-delay:160ms" data-item="CardFuncionalidade">
+            <div class="pdm-card__icone pdm-card__icone--verde" data-prop="tom"><i data-icon="shield-check"></i></div>
+            <h3 class="pdm-card__titulo" data-prop="titulo">Relatórios com acesso seguro</h3>
+            <p class="pdm-card__texto" data-prop="texto">Relatórios por estudante, com acesso controlado por perfil: Admin, Gestor e Visualizador.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         COMPONENTE: SecaoPrograma  ·  S
+         Duas colunas: Carteira + ListaPilares. id="programa" é o destino do CTA
+         do Hero; tabindex="-1" permite receber foco sem entrar na ordem do Tab.
+         =================================================================== -->
+    <section id="programa" tabindex="-1" class="com-grafismos py-14 lg:py-20 outline-none" data-component="SecaoPrograma">
+      <!-- grafismos (decorativos): X verde no alto à direita, pontilhado azul embaixo à esquerda -->
+      <svg class="grafismo text-verde" aria-hidden="true" style="right:4%; top:22px; width:28px; height:28px"><use href="#g-x"/></svg>
+      <svg class="grafismo grafismo--desktop text-azul-pdm" aria-hidden="true" style="left:1.2%; bottom:14px; width:30px; height:48px"><use href="#g-pontos"/></svg>
+      <div class="container-pdm grid lg:grid-cols-[1fr_1fr] gap-6 items-stretch">
+
+        <!-- =================================================================
+             COMPONENTE: Carteira  ·  C (contém MoedaCarteira)
+             Carteira feita só com CSS. A descrição do programa fica na ABA.
+             props: eyebrow, titulo, descricao
+             CAMADAS (z-index) descritas no CSS ".carteira":
+               1 fundo + fenda · 2 MoedaCarteira · 3 aba (texto) · 4 fecho
+             ================================================================= -->
+        <div class="carteira" data-pdm-reveal data-component="Carteira">
+          <div class="carteira__fundo" aria-hidden="true"></div>          <!-- camada 1 -->
+          <div class="carteira__fenda" aria-hidden="true"></div>          <!-- camada 1 -->
+
+          <!-- ===============================================================
+               COMPONENTE: MoedaCarteira  ·  C  ·  sem props
+               Moeda grande de destaque (SVG autoral; mesmo desenho da constante
+               SVG_MOEDA do script → virar <MoedaSvg /> compartilhado).
+               É um <button>: clique/Enter/Espaço → pulinho (script, parte C2).
+               Também pula quando o CTA do Hero termina de rolar (parte C1):
+               em React, expor pular() por Context ou useImperativeHandle.
+               =============================================================== -->
+          <button type="button" class="carteira__moeda" aria-label="Moeda do Pé-de-Meia: clique para ela pular" data-component="MoedaCarteira">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="24" r="22" fill="var(--amarelo-600)"/>
+              <circle cx="22.5" cy="22.5" r="20" fill="var(--amarelo)"/>
+              <circle cx="22.5" cy="22.5" r="12.5" fill="none" stroke="var(--amarelo-600)" stroke-width="3"/>
+              <path d="M13 15a12 12 0 0 1 7-5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".75"/>
+            </svg>
+          </button>
+
+          <div class="carteira__aba p-8 sm:p-10 pr-20 sm:pr-24">          <!-- camada 3 -->
+            <div class="carteira__costura" aria-hidden="true"></div>
+            <div class="relative">
+              <span class="pdm-eyebrow eyebrow-escuro" data-prop="eyebrow">Programa Pé-de-Meia</span>
+              <h2 class="pdm-titulo" data-prop="titulo">A poupança do ensino médio</h2>
+              <p class="mt-4 text-[17px] leading-7 text-ink" data-prop="descricao">Programa educacional voltado para estudantes do ensino médio público, que incentiva a frequência e o bom desempenho escolar e promove a permanência na escola.</p>
+            </div>
+          </div>
+          <div class="carteira__fecho" aria-hidden="true"><span></span></div> <!-- camada 4 -->
+        </div>
+
+        <!-- =================================================================
+             COMPONENTE: ListaPilares  ·  S
+             props: pilares[] → Pilar · props: icone, tom('azul'|'amarelo'|'verde'), titulo, texto
+             style="transform:none" desliga o hover de elevação do pdm-card
+             (este card é só um contêiner, não um item clicável).
+             ================================================================= -->
+        <div class="pdm-card justify-center gap-6 p-8" style="transform:none" data-pdm-reveal data-component="ListaPilares" data-prop="pilares">
+          <div class="pilar" data-item="Pilar">
+            <div class="pdm-card__icone" data-prop="tom"><i data-icon="book-open"></i></div>
+            <div><h3 class="pdm-card__titulo text-base" data-prop="titulo">Educação de qualidade</h3><p class="pdm-card__texto" data-prop="texto">Foco nos estudantes do ensino médio da rede pública estadual.</p></div>
+          </div>
+          <div class="pilar" data-item="Pilar">
+            <div class="pdm-card__icone pdm-card__icone--amarelo" data-prop="tom"><i data-icon="award"></i></div>
+            <div><h3 class="pdm-card__titulo text-base" data-prop="titulo">Incentivo estudantil</h3><p class="pdm-card__texto" data-prop="texto">Beneficia quem mantém frequência adequada e bom desempenho.</p></div>
+          </div>
+          <div class="pilar" data-item="Pilar">
+            <div class="pdm-card__icone pdm-card__icone--verde" data-prop="tom"><i data-icon="chart-column"></i></div>
+            <div><h3 class="pdm-card__titulo text-base" data-prop="titulo">Acompanhamento contínuo</h3><p class="pdm-card__texto" data-prop="texto">Gestores acompanham o programa com dados atualizados e transparência.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         COMPONENTE: SecaoFonteDados  ·  S
+         props: eyebrow, titulo, tituloDestaque, passos[] → Passo
+         Filho repetido: Passo · props: numero, titulo, texto
+         A linha tracejada entre os números é o ::before de .passos (CSS),
+         visível só a partir de 768px. O --pdm-delay cresce 100ms por passo.
+         =================================================================== -->
+    <section id="dados" class="com-grafismos bg-superficie py-14 lg:py-20" data-component="SecaoFonteDados">
+      <!-- grafismos (decorativos): arcos amarelos saindo da borda direita (espelhados
+           com scaleX(-1), porque o símbolo desenha a metade direita), zigue-zague verde -->
+      <svg class="grafismo grafismo--desktop text-amarelo" aria-hidden="true" style="right:0; top:28px; width:64px; height:128px; transform:scaleX(-1)"><use href="#g-arcos"/></svg>
+      <svg class="grafismo grafismo--desktop text-verde" aria-hidden="true" style="right:12%; top:72px; width:72px; height:22px"><use href="#g-zigue"/></svg>
+      <div class="container-pdm">
+        <header class="max-w-2xl" data-pdm-reveal>
+          <span class="pdm-eyebrow pdm-eyebrow--meia" data-prop="eyebrow">Fonte dos dados</span>
+          <h2 class="pdm-titulo"><span data-prop="titulo">De onde vêm</span> <em data-prop="tituloDestaque">as informações</em></h2>
+        </header>
+
+        <ol class="passos relative grid md:grid-cols-3 gap-8 md:gap-6 mt-10 list-none p-0" data-prop="passos">
+          <li data-pdm-reveal data-item="Passo">
+            <span class="passo-num" data-prop="numero">1</span>
+            <h3 class="pdm-card__titulo mt-4" data-prop="titulo">Registro na escola</h3>
+            <p class="pdm-card__texto mt-2" data-prop="texto">A frequência é lançada no Sistema Gestão Presente (SGP).</p>
+          </li>
+          <li data-pdm-reveal style="--pdm-delay:100ms" data-item="Passo">
+            <span class="passo-num" data-prop="numero">2</span>
+            <h3 class="pdm-card__titulo mt-4" data-prop="titulo">Exportação dos dados</h3>
+            <p class="pdm-card__texto mt-2" data-prop="texto">Os dados do Gestão Presente são exportados e inseridos nesta plataforma.</p>
+          </li>
+          <li data-pdm-reveal style="--pdm-delay:200ms" data-item="Passo">
+            <span class="passo-num" data-prop="numero">3</span>
+            <h3 class="pdm-card__titulo mt-4" data-prop="titulo">Consulta autorizada</h3>
+            <p class="pdm-card__texto mt-2" data-prop="texto">Servidores com acesso consultam as informações conforme o seu perfil.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================================================================
+       COMPONENTE: Rodape  ·  S  ·  DS: Rodape (padrão institucional Seduc-AM)
+       Ponta a ponta. Assinatura Seduc-AM e DETIN/GETAG são FIXAS (não são props).
+       props: marca, orgao, redes[{rede('facebook'|'instagram'|'youtube'), href}],
+              direitos, contato, endereco (linhas[])
+       =================================================================== -->
+  <footer class="pdm-footer" data-component="Rodape">
+    <img class="pdm-footer__ondas" src="assets/rodape-ondas.svg" alt="">
+    <div class="pdm-footer__grid">
+      <div>
+        <div class="pdm-footer__marca" data-prop="marca">Consulta Pé-de-Meia</div>
+        <p data-prop="orgao">SEDUC-AM</p>
+        <div class="pdm-footer__social" data-prop="redes">
+          <a href="#" aria-label="Facebook da Seduc-AM" data-item="RedeSocial" data-prop="href"><i data-icon="facebook"></i></a>
+          <a href="#" aria-label="Instagram da Seduc-AM" data-item="RedeSocial" data-prop="href"><i data-icon="instagram"></i></a>
+          <a href="#" aria-label="YouTube da Seduc-AM" data-item="RedeSocial" data-prop="href"><i data-icon="youtube"></i></a>
+        </div>
+        <p data-prop="direitos">© 2026 Todos os direitos reservados</p>
+      </div>
+      <div>
+        <h4>Contato</h4>
+        <p data-prop="contato">[e-mail de suporte do sistema]</p>
+        <h4 style="margin-top:20px">Endereço</h4>
+        <p data-prop="endereco">Av. Waldomiro Lustoza, 250<br>Japiim, Manaus - AM<br>CEP: 69076-830</p>
+      </div>
+      <div class="pdm-footer__assinatura">
+        <img class="seduc" src="assets/seduc-am-branco.svg" alt="Secretaria de Estado de Educação e Desporto Escolar, Governo do Amazonas">
+        <div>
+          <img class="detin" src="assets/detin-getag-branco.svg" alt="DETIN, Departamento de Tecnologia e Informação · GETAG">
+          <p class="pdm-footer__dev">© Desenvolvido pelo Departamento de Tecnologia e Informação</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===================================================================
+       COMPONENTE: VoltarAoTopo  ·  C (precisa de JS)  ·  sem props
+       Botão redondo fixo no canto inferior direito. Só aparece depois que o
+       Hero sai da tela (script, parte D); ao clicar, rola suave até o topo.
+       Ícone: Lucide "arrow-up" (inline; em React: <ArrowUp /> de lucide-react).
+       =================================================================== -->
+  <button type="button" class="voltar-topo" id="voltar-topo" aria-label="Voltar ao topo da página" data-component="VoltarAoTopo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+  </button>
+
+  <!-- Utilitários do Design System (window.PeDeMeia). Sem dependências externas:
+       ícones Lucide embutidos (em React: lucide-react) + IntersectionObserver nativo.
+       Ver "BIBLIOTECAS E DEPENDÊNCIAS" no topo do arquivo. -->
+  <script src="js/pdm.js"></script>
+  <script>
+    PeDeMeia.hidratarIcones();                          // troca cada <i data-icon="..."> pelo SVG do Lucide
+    PeDeMeia.revelar();                                 // fade-up das seções ao entrarem na tela (só [data-pdm-reveal])
+  </script>
+
+  <!-- =====================================================================
+       INTERAÇÕES DA MOEDA
+       Tecnologia: JavaScript puro + Web Animations API (element.animate),
+       nativa do navegador, sem biblioteca.
+       Docs: https://developer.mozilla.org/docs/Web/API/Web_Animations_API
+       Origem: autoral (desenvolvido para este protótipo).
+       Só animamos transform e opacity: não recalcula layout e roda liso.
+       ===================================================================== -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* -------------------------------------------------------------------
+       A) UTILITÁRIOS COMPARTILHADOS
+       ------------------------------------------------------------------- */
+
+    // Respeita a configuração do sistema "reduzir movimento". Se ativa, nenhuma
+    // animação roda e os links funcionam normalmente (login ou âncora).
+    var reduzMovimento = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    // Navegador sem Web Animations API → mesma saída: comportamento padrão do link.
+    var temWAAPI = 'animate' in Element.prototype;
+
+    var TAM = 44;          // tamanho da moeda em px (igual ao .moeda-voo no CSS)
+    var METADE = TAM / 2;  // usado para centralizar: as posições calculadas são o CENTRO da moeda
+
+    // Desenho da moeda: SVG autoral nas cores do token (amarelo-600 = borda, amarelo = face).
+    var SVG_MOEDA = '<svg viewBox="0 0 48 48" aria-hidden="true">' +
+      '<circle cx="24" cy="24" r="22" fill="var(--amarelo-600)"/>' +
+      '<circle cx="22.5" cy="22.5" r="20" fill="var(--amarelo)"/>' +
+      '<circle cx="22.5" cy="22.5" r="12.5" fill="none" stroke="var(--amarelo-600)" stroke-width="3"/>' +
+      '<path d="M13 15a12 12 0 0 1 7-5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".75"/></svg>';
+
+    // Cria a moeda VOADORA (usada só na parte B) e a coloca no <body>.
+    // position:fixed → coordenadas da TELA (viewport), iguais às do clique.
+    // z-index 60: acima da navbar (50) enquanto a moeda está "no ar".
+    function criarMoeda() {
+      var el = document.createElement('div');
+      el.className = 'moeda-voo';
+      el.innerHTML = SVG_MOEDA;
+      el.style.position = 'fixed';
+      el.style.zIndex = '60';
+      document.body.appendChild(el);
+      return el;
+    }
+
+    // Monta a string de transform com a moeda CENTRADA no ponto (x, y).
+    function posicionar(x, y, rot, escala) {
+      return 'translate(' + (x - METADE) + 'px,' + (y - METADE) + 'px) rotate(' + rot + 'deg) scale(' + (escala == null ? 1 : escala) + ')';
+    }
+
+    // Ponto inicial da moeda: onde está o mouse; se o clique veio do teclado
+    // (Enter, sem coordenadas), usa o centro do botão.
+    function pontoInicial(ev, link) {
+      if (ev.clientX || ev.clientY) return { x: ev.clientX, y: ev.clientY };
+      var b = link.getBoundingClientRect();
+      return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+    }
+
+    /* -------------------------------------------------------------------
+       B) MOEDA NA MEIA — botão "Entrar" da navbar  [data-moeda="meia"]
+       -------------------------------------------------------------------
+       O QUE ACONTECE
+         1. Nasce uma moeda no ponto do clique (aparece crescendo de 0.2 a 1).
+         2. Ela voa em ARCO até logo acima da boca da meia, girando 360°.
+            O arco é uma curva de Bézier quadrática: início → ponto de controle
+            (160px acima do ponto mais alto) → destino, amostrada em 14 quadros.
+            Durante o voo a moeda está em position:fixed, por cima de tudo.
+         3. TROCA DE CAMADA: ao chegar, a moeda é movida para .hero-arte .moedas
+            (z-index 2), que fica ATRÁS da .meia (z-index 3). Ela desce pelo cano
+            e a meia a esconde. É isso que dá a ilusão de "entrar na meia".
+         4. A meia dá um "pulinho" (squash and stretch: achata, estica, volta),
+            com transform-origin no pé (definido no CSS).
+         5. PAUSA_FINAL ms depois, a animação é dada como concluída e SÓ ENTÃO
+            o login prossegue (veja "ORDEM OBRIGATÓRIA" logo abaixo).
+       QUANDO NÃO ANIMA (a promessa da animação resolve na hora)
+         - "reduzir movimento" ligado, navegador sem Web Animations API, ou a
+           meia fora da tela (ex.: usuário já rolou a página para baixo).
+
+       ┌──────────────────────────────────────────────────────────────────┐
+       │ ORDEM OBRIGATÓRIA: ANIMAÇÃO PRIMEIRO, RESULTADO DO LOGIN DEPOIS  │
+       └──────────────────────────────────────────────────────────────────┘
+       Neste protótipo o "Entrar" não faz requisição: só segue para o href.
+       Mas o fluxo já está PRÉ-CONFIGURADO para quando fizer (fetch, server
+       action, NextAuth signIn(), OAuth/gov.br etc.):
+
+         clique em Entrar
+           ├─ animarMoedaNaMeia()  → Promise que resolve quando a moeda some na meia
+           └─ entrar()             → Promise da requisição (começa JÁ, em paralelo)
+         Promise.all([animação, requisição])
+           → concluirEntrar()      → redireciona / mostra erro SÓ AGORA
+
+       Por que: se o redirecionamento acontecer assim que a requisição
+       responder, a página troca no meio do voo e a microinteração se perde.
+       A requisição pode (e deve) começar em paralelo para não atrasar o
+       usuário; o que espera a animação é a NAVEGAÇÃO ou a mensagem de erro.
+       Tempo máximo que a animação segura o usuário: DUR_VOO + DUR_DESCIDA +
+       PAUSA_FINAL ≈ 1,5s. Não encurte abaixo disso sem rever a animação.
+
+       AO CONVERTER (React/Next/etc.), MANTENHA ESTA REGRA:
+         const [_, resultado] = await Promise.all([animarMoeda(), entrar()]);
+         router.push(...)  // ou exibir erro, sempre DEPOIS do Promise.all
+       NÃO faça: onClick → await entrar() → router.push() (mata a animação).
+       NÃO use <a href> navegando direto, nem form submit sem preventDefault.
+       ONDE AJUSTAR
+         - Boca da meia (unidades do viewBox 156×278 do SVG oficial):
+           BOCA_ACIMA = onde o voo termina; BOCA_DENTRO = fim da descida.
+           O cano da meia desce para a ESQUERDA, por isso x diminui e y aumenta.
+         - Altura do arco: ALTURA_ARCO. Durações: DUR_VOO, DUR_DESCIDA, DUR_PULO.
+       ------------------------------------------------------------------- */
+    var arteHero = document.querySelector('.hero-arte');
+    var meia = arteHero && arteHero.querySelector('.meia');
+    var camadaMeia = arteHero && arteHero.querySelector('.moedas');
+
+    var MEIA_VIEWBOX_L = 156;               // largura do viewBox do SVG da meia
+    var BOCA_ACIMA  = { x: 144, y: -20 };   // um pouco acima e fora da boca
+    var BOCA_DENTRO = { x: 86,  y: 86 };    // dentro do cano, já coberto pela meia
+    var ALTURA_ARCO = 160, DUR_VOO = 900, DUR_DESCIDA = 380, DUR_PULO = 420;
+    var PAUSA_FINAL = 250;  // respiro depois que a moeda some, antes de liberar o login
+
+    /* ===== PONTO DE INTEGRAÇÃO DO LOGIN (pré-configurado) =====================
+       entrar(link)  → coloque AQUI a requisição de login. Deve RETORNAR uma
+                       Promise. Hoje não há requisição: resolve na hora.
+                       Exemplo:
+                         return fetch('/api/login', { method: 'POST', body: ... })
+                           .then(function (r) { if (!r.ok) throw r; return r.json(); });
+       concluirEntrar(link, resultado) → o que fazer DEPOIS da animação e da
+                       requisição: redirecionar, abrir o formulário, etc.
+                       Hoje: segue para o href do botão (se não for "#").
+       falharEntrar(link, erro) → mostrar o erro, também DEPOIS da animação.
+       ========================================================================= */
+    function entrar(link) {
+      return Promise.resolve(null);   // ← sem requisição neste protótipo
+    }
+    function concluirEntrar(link, resultado) {
+      var href = link.getAttribute('href');
+      if (href && href !== '#') window.location.href = href;
+    }
+    function falharEntrar(link, erro) {
+      console.error('Falha ao entrar', erro);  // ← trocar por mensagem na tela
+    }
+
+    // Clique em "Entrar": dispara animação e requisição juntas e só conclui
+    // quando AS DUAS terminam (ver "ORDEM OBRIGATÓRIA" acima).
+    function aoClicarEntrar(ev, link) {
+      ev.preventDefault();                       // o JS controla a navegação daqui em diante
+      var animacao = animarMoedaNaMeia(ev, link);
+      var requisicao = entrar(link);             // começa em paralelo, não espera a animação
+      Promise.all([animacao, requisicao])
+        .then(function (res) { concluirEntrar(link, res[1]); })
+        .catch(function (erro) { animacao.then(function () { falharEntrar(link, erro); }); });
+    }
+
+    // Retorna SEMPRE uma Promise: resolve quando a moeda sumiu na meia
+    // (ou na hora, quando não há animação).
+    function animarMoedaNaMeia(ev, link) {
+      if (!meia || reduzMovimento.matches || !temWAAPI) return Promise.resolve();
+      var r = meia.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight) return Promise.resolve();  // meia fora da tela
+
+      // Converte pontos do viewBox da meia para pixels da tela.
+      var u = r.width / MEIA_VIEWBOX_L;
+      var acima  = { x: r.left + BOCA_ACIMA.x * u,  y: r.top + BOCA_ACIMA.y * u };
+      var dentro = { x: r.left + BOCA_DENTRO.x * u, y: r.top + BOCA_DENTRO.y * u };
+      var ini = pontoInicial(ev, link);
+      var ctrl = { x: (ini.x + acima.x) / 2, y: Math.min(ini.y, acima.y) - ALTURA_ARCO };
+
+      // ETAPA 1-2: voo em arco (camada fixa, por cima da página)
+      var moeda = criarMoeda();
+      var quadros = [{ transform: posicionar(ini.x, ini.y, 0, .2), opacity: 0, offset: 0 }];
+      var N = 14;
+      for (var i = 1; i <= N; i++) {
+        var t = i / N, mt = 1 - t;
+        // Bézier quadrática: B(t) = (1-t)²·P0 + 2(1-t)t·P1 + t²·P2
+        var x = mt * mt * ini.x + 2 * mt * t * ctrl.x + t * t * acima.x;
+        var y = mt * mt * ini.y + 2 * mt * t * ctrl.y + t * t * acima.y;
+        quadros.push({ transform: posicionar(x, y, Math.round(360 * t)), opacity: 1, offset: 0.1 + 0.9 * t });
+      }
+      var voo = moeda.animate(quadros, { duration: DUR_VOO, easing: 'cubic-bezier(.4,0,.3,1)', fill: 'forwards' });
+
+      return voo.finished.then(function () {
+        // ETAPA 3: troca de camada → atrás da meia. Coordenadas passam a ser relativas à .hero-arte.
+        var a = arteHero.getBoundingClientRect();
+        moeda.style.position = 'absolute';
+        moeda.style.zIndex = '';
+        camadaMeia.appendChild(moeda);
+        var desce = moeda.animate([
+          { transform: posicionar(acima.x - a.left, acima.y - a.top, 360) },
+          { transform: posicionar(dentro.x - a.left, dentro.y - a.top, 380) }
+        ], { duration: DUR_DESCIDA, easing: 'cubic-bezier(.55,0,.8,.3)', fill: 'forwards' }); // acelera, como se caísse
+
+        // ETAPA 4: pulinho da meia (começa um pouco antes da moeda sumir)
+        meia.animate([
+          { transform: 'scale(1,1)' },
+          { transform: 'scale(1.06,.94)', offset: .4 },   // achata ao "receber" a moeda
+          { transform: 'scale(.98,1.03)', offset: .7 },   // estica de volta
+          { transform: 'scale(1,1)' }
+        ], { duration: DUR_PULO, delay: DUR_DESCIDA - 120, easing: 'ease-out' });
+        return desce.finished;
+      }).then(function () {
+        // ETAPA 5: limpa a moeda e, após PAUSA_FINAL, resolve a Promise da animação.
+        // Quem decide o que vem depois é aoClicarEntrar (não navegue daqui).
+        moeda.remove();
+        return new Promise(function (ok) { setTimeout(ok, PAUSA_FINAL); });
+      });
+    }
+
+    /* -------------------------------------------------------------------
+       C) PULINHO DA MOEDA NA CARTEIRA
+          Três gatilhos para a MESMA animação (pularMoedaCarteira):
+            C1. clique em "Conheça o programa"  [data-moeda="carteira"]
+            C2. clique na própria moeda          (.carteira__moeda, um <button>)
+            C3. a moeda APARECE NA TELA durante a rolagem (IntersectionObserver)
+       -------------------------------------------------------------------
+       O PULINHO (pularMoedaCarteira)
+         sobe ALTURA_PULO px girando −12° → cai de volta acelerando → achata ao
+         "bater" na carteira (squash: scale 1.12 × 0.86) → volta ao normal.
+         A moeda fica na camada 2, atrás da aba (camada 3): ao subir, aparece
+         mais; ao cair, a metade de baixo volta para trás da aba.
+         Trava: se um pulo ainda está rodando, cliques extras são ignorados, para
+         as animações não se acumularem.
+
+       C1 · O QUE ACONTECE NO "CONHEÇA O PROGRAMA"
+         1. O clique NÃO é interceptado: o link (href="#programa") rola a página
+            até a seção com o scroll suave do CSS (html { scroll-behavior: smooth }).
+         2. Quando a rolagem TERMINA, a moeda pula (assim o usuário vê o pulo).
+
+       C2 · O QUE ACONTECE AO CLICAR NA MOEDA
+         Pula na hora. Por ser <button>, funciona também com Tab + Enter/Espaço.
+
+       C3 · O QUE ACONTECE QUANDO A MOEDA APARECE NA TELA
+         Tecnologia: IntersectionObserver (API nativa, não instala nada).
+         1. Um observador vigia a moeda. Quando VISIVEL_MIN (60%) dela está na
+            tela, descontando a faixa de baixo (MARGEM_INFERIOR = -8%, ou seja,
+            a moeda precisa ter subido um pouco além da borda inferior), ela pula.
+         2. Espera DEMORA_APARECER ms antes de pular: a carteira entra com
+            fade-up (600ms) e assim o pulo acontece com ela já visível.
+         3. Pula UMA vez por entrada. O gatilho só "rearma" quando a moeda sai
+            totalmente da tela (intersectionRatio = 0). Rolar para longe e
+            voltar faz pular de novo.
+         4. Não briga com o C1: enquanto o "Conheça o programa" está rolando
+            (ctaEmAndamento = true), o C3 fica quieto; o C1 faz o pulo no fim.
+         Em React: useEffect com IntersectionObserver no ref da moeda (cleanup:
+         io.disconnect()), ou Framer Motion useInView(ref, { amount: 0.6 }).
+       COMO SABEMOS QUE A ROLAGEM TERMINOU
+         - "Silêncio" de rolagem: a cada evento 'scroll' o temporizador é
+           reiniciado; quando a página fica PAUSA_FIM ms sem rolar, a rolagem
+           acabou e a moeda pula. Funciona em qualquer navegador e com qualquer
+           duração de rolagem (tela grande, pequena, celular).
+         - Se a página já estava na seção (nenhuma rolagem), o primeiro
+           temporizador vence e a moeda pula logo.
+         - Teto de segurança: ESPERA_MAX ms, para nunca ficar esperando.
+         - A trava "jaPulou" garante um pulo por clique.
+       QUANDO NÃO ANIMA
+         - "reduzir movimento" ligado ou navegador sem Web Animations API:
+           só a rolagem da âncora acontece, e o clique na moeda não faz nada.
+       ONDE AJUSTAR
+         - ALTURA_PULO (px), DUR_PULO_CARTEIRA (ms), PAUSA_FIM (ms), ESPERA_MAX (ms).
+         - C3: VISIVEL_MIN (0 a 1), MARGEM_INFERIOR, DEMORA_APARECER (ms).
+           Para pular só na PRIMEIRA vez, troque REPETIR_AO_VOLTAR para false.
+         - Tamanho da moeda: variável CSS --moeda em .carteira__moeda.
+       ------------------------------------------------------------------- */
+    var moedaCarteira = document.querySelector('.carteira__moeda');
+    var ALTURA_PULO = 48, DUR_PULO_CARTEIRA = 650, PAUSA_FIM = 150, ESPERA_MAX = 4000;
+    var VISIVEL_MIN = 0.6, MARGEM_INFERIOR = '-8%', DEMORA_APARECER = 300, REPETIR_AO_VOLTAR = true;
+    var pulando = false;          // trava: true enquanto um pulo está rodando
+    var ctaEmAndamento = false;   // true enquanto o C1 espera a rolagem acabar (silencia o C3)
+
+    function pularMoedaCarteira() {
+      if (!moedaCarteira || pulando || reduzMovimento.matches || !temWAAPI) return;
+      pulando = true;
+      var pulo = moedaCarteira.animate([
+        { transform: 'translateY(0) rotate(0deg) scale(1,1)', easing: 'cubic-bezier(.2,.7,.3,1)' },  // sobe desacelerando
+        { transform: 'translateY(-' + ALTURA_PULO + 'px) rotate(-12deg) scale(1,1)', offset: .4, easing: 'cubic-bezier(.5,0,.75,0)' }, // topo do pulo; daqui cai acelerando
+        { transform: 'translateY(0) rotate(0deg) scale(1.12,.86)', offset: .75 },  // bate e achata
+        { transform: 'translateY(0) rotate(0deg) scale(1,1)' }                     // volta ao normal
+      ], { duration: DUR_PULO_CARTEIRA });  // cada trecho tem seu próprio easing (definido no quadro de origem)
+      pulo.finished.then(function () { pulando = false; });  // libera o próximo pulo
+    }
+
+    // C2: clique (ou Enter/Espaço) na própria moeda → pula na hora
+    if (moedaCarteira) moedaCarteira.addEventListener('click', pularMoedaCarteira);
+
+    // C1: "Conheça o programa" → espera a rolagem terminar e então pula
+    function moedaNaCarteira(ev, link) {
+      if (!moedaCarteira || reduzMovimento.matches || !temWAAPI) return;
+      // não chamamos ev.preventDefault(): a âncora faz a rolagem sozinha
+      ctaEmAndamento = true;        // o C3 fica quieto até este pulo acontecer
+      var jaPulou = false, silencio, teto;
+      function pular() {
+        if (jaPulou) return;
+        jaPulou = true;
+        ctaEmAndamento = false;
+        window.removeEventListener('scroll', aoRolar);
+        clearTimeout(silencio);
+        clearTimeout(teto);
+        pularMoedaCarteira();
+      }
+      function aoRolar() {                       // ainda rolando: reinicia a contagem
+        clearTimeout(silencio);
+        silencio = setTimeout(pular, PAUSA_FIM);
+      }
+      window.addEventListener('scroll', aoRolar, { passive: true });
+      silencio = setTimeout(pular, PAUSA_FIM + 100); // sem rolagem nenhuma: pula logo
+      teto = setTimeout(pular, ESPERA_MAX);          // teto de segurança
+    }
+
+    // C3: a moeda aparece na tela → pula (uma vez por entrada)
+    if (moedaCarteira && 'IntersectionObserver' in window) {
+      var armado = true;  // pode pular na próxima vez que aparecer?
+      var observador = new IntersectionObserver(function (entradas) {
+        entradas.forEach(function (e) {
+          if (e.intersectionRatio >= VISIVEL_MIN && armado) {
+            armado = false;                                   // não repete enquanto continuar na tela
+            if (!ctaEmAndamento) setTimeout(function () {
+              if (!ctaEmAndamento) pularMoedaCarteira();      // confere de novo: o C1 pode ter começado
+            }, DEMORA_APARECER);
+          } else if (e.intersectionRatio === 0 && REPETIR_AO_VOLTAR) {
+            armado = true;                                    // saiu totalmente da tela: rearma
+          }
+        });
+      }, {
+        threshold: [0, VISIVEL_MIN],                  // avisa ao sair (0) e ao ficar 60% visível
+        rootMargin: '0px 0px ' + MARGEM_INFERIOR + ' 0px'  // encolhe a "tela" por baixo
+      });
+      observador.observe(moedaCarteira);
+    }
+
+    /* -------------------------------------------------------------------
+       D) BOTÃO VOLTAR AO TOPO  (#voltar-topo)
+       -------------------------------------------------------------------
+       QUANDO APARECE
+         Quando a parte de BAIXO do Hero passa da borda de cima da tela, ou
+         seja, a seção inicial sumiu por completo. Some de novo ao voltar ao Hero.
+       COMO DETECTA
+         Evento 'scroll' (passive) + requestAnimationFrame: no máximo uma
+         verificação por quadro. Compara a posição do fim do Hero com o topo da tela.
+         (Alternativa equivalente: IntersectionObserver observando o Hero.)
+       AO CLICAR
+         Rola até o topo (suave; instantâneo com "reduzir movimento") e devolve o
+         foco ao logo da navbar, para quem navega por teclado continuar do início.
+       ONDE AJUSTAR
+         Posição/tamanho/cores: CSS .voltar-topo. Momento de aparecer: a conta
+         em atualizarVoltarTopo() (ex.: "+ 200" para aparecer um pouco depois).
+       EM REACT
+         useEffect com listener de scroll (cleanup no return) + useState(visivel);
+         className={visivel ? 'voltar-topo is-visivel' : 'voltar-topo'}.
+       ------------------------------------------------------------------- */
+    var botaoTopo = document.getElementById('voltar-topo');
+    var hero = document.querySelector('[data-component="Hero"]');
+    var agendado = false;
+
+    function atualizarVoltarTopo() {
+      agendado = false;
+      var fimDoHero = hero.getBoundingClientRect().bottom;   // fim do hero em relação ao topo da tela
+      var mostrar = fimDoHero <= 0;                          // <= 0: o hero saiu inteiro por cima
+      botaoTopo.classList.toggle('is-visivel', mostrar);
+    }
+    if (botaoTopo && hero) {
+      window.addEventListener('scroll', function () {
+        if (!agendado) { agendado = true; requestAnimationFrame(atualizarVoltarTopo); }
+      }, { passive: true });
+      window.addEventListener('resize', atualizarVoltarTopo);
+      atualizarVoltarTopo();                                 // estado certo ao abrir já rolado (ex.: #programa)
+
+      botaoTopo.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: reduzMovimento.matches ? 'auto' : 'smooth' });
+        var logo = document.querySelector('.pdm-nav__logo');
+        if (logo) logo.focus({ preventScroll: true });       // teclado recomeça do topo
+        if (history.replaceState) history.replaceState(null, '', location.pathname); // limpa o #âncora
+      });
+    }
+
+    /* -------------------------------------------------------------------
+       LIGAÇÃO DOS BOTÕES
+       Qualquer elemento com data-moeda="meia" ou data-moeda="carteira" ganha a
+       animação correspondente. Para reaproveitar, basta marcar o botão.
+       ------------------------------------------------------------------- */
+    document.querySelectorAll('[data-moeda]').forEach(function (link) {
+      link.addEventListener('click', function (ev) {
+        var tipo = link.getAttribute('data-moeda');
+        if (tipo === 'meia') aoClicarEntrar(ev, link);   // animação + login, nessa ordem de conclusão
+        else if (tipo === 'carteira') moedaNaCarteira(ev, link);
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
