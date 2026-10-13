@@ -386,12 +386,7 @@
       border-radius: 23px 0 0 23px; background: var(--azul-institucional); display: grid; place-items: center; }
     .carteira__fecho span { width: 16px; height: 16px; border-radius: 50%; background: var(--amarelo); box-shadow: 0 0 0 4px rgba(255,255,255,.18); transition: transform .2s; }
     .eyebrow-escuro { color: var(--ink); }
-    /* Na aba da carteira (fundo amarelo) o marcador é a MEIA em AZUL: mesma silhueta do
-       pdm-eyebrow--meia, mas pintada com a cor do token via máscara CSS (a meia amarela
-       sumiria no amarelo). mask = forma do SVG; background = cor. */
-    .eyebrow-escuro::before { width: 12px; height: 22px; border-radius: 0; background: var(--azul-institucional);
-      -webkit-mask: url("assets/pe-de-meia-meia.svg") center / contain no-repeat;
-              mask: url("assets/pe-de-meia-meia.svg") center / contain no-repeat; }
+    .eyebrow-escuro::before { display: none; } /* aba da carteira: eyebrow sem marcador (sem traço e sem meia) */
 
     /* ===================== PILARES  → componente ListaPilares / Pilar ===================== */
     .pilar { display: flex; gap: 14px; align-items: flex-start; }
