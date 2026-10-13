@@ -252,18 +252,18 @@
        role="tooltip". Esc fecha (script, parte E).
        Escondida = opacity 0 + sobe 4px + visibility hidden; aparece em 180ms. */
     .nav-acesso { position: relative; display: inline-flex; }
-    .nav-acesso__icone { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #f5dc8a; cursor: help;
+    .nav-acesso__icone { width: 28px; height: 28px; /* 30% menor que os 40px originais */ border-radius: 50%; border: 1px solid #f5dc8a; cursor: help;
       display: grid; place-items: center; background: var(--amarelo-50); color: var(--amarelo-ink);
       transition: background-color .2s ease, transform .2s ease; }
     .nav-acesso__icone:hover { background: #ffefb3; }
     .nav-acesso__icone:focus-visible { outline: 3px solid var(--azul-institucional); outline-offset: 2px; }
-    .nav-acesso__icone .pdm-icon { width: 18px; height: 18px; }
+    .nav-acesso__icone .pdm-icon { width: 13px; height: 13px; } /* acompanha a redução de 30% */
     .nav-acesso__dica { position: absolute; z-index: 60; top: calc(100% + 10px); right: -8px; width: 248px;
       padding: 12px 14px; border-radius: 12px; background: var(--branco); border: 1px solid var(--linha);
       box-shadow: 0 12px 28px rgba(0,46,125,.16); color: var(--ink-muted); font: 400 13px/19px var(--font-sans); text-align: left;
       opacity: 0; visibility: hidden; transform: translateY(-4px); pointer-events: none;
       transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s; }
-    .nav-acesso__dica::before { content: ""; position: absolute; top: -6px; right: 22px; width: 10px; height: 10px;
+    .nav-acesso__dica::before { content: ""; position: absolute; top: -6px; right: 16px; width: 10px; height: 10px;
       background: var(--branco); border-left: 1px solid var(--linha); border-top: 1px solid var(--linha); transform: rotate(45deg); } /* setinha */
     .nav-acesso__dica strong { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
     .nav-acesso:hover .nav-acesso__dica, .nav-acesso:focus-within .nav-acesso__dica, .nav-acesso.is-aberta .nav-acesso__dica {
