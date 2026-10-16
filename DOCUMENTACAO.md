@@ -45,6 +45,14 @@ A chamada "Você é gestor ou servidor autorizado?" foi removida. A página fico
 
 **Como funciona**: cada forma é um `<symbol>` na "biblioteca de grafismos" (SVG oculto no início do `<body>`) e é reutilizada com `<svg class="grafismo text-COR"><use href="#g-FORMA"/></svg>`. A cor vem de `currentColor`. Os grafismos ficam atrás do conteúdo (z-index 0), não recebem clique e são ocultos para leitores de tela. Para mover um grafismo, altere o `style` (right/left/top/bottom, width/height).
 
+## Meia com moedinhas e login no lugar da arte
+
+- **Meia clicável** (script, parte B): a meia é um `<button>`. Cada clique solta **uma** moeda: a meia dá um "cuspe" (estica e volta), a moeda sobe por dentro do cano, atrás da meia, sai pela boca, faz um arco para um dos lados (mais vezes para a direita), gira e some caindo. Cliques seguidos geram moedas independentes. Ajustes: `ALTURA_SALTO`, `DISTANCIA_LADO`, `QUEDA`, `DUR_SUBIDA`, `DUR_ARCO`, `DUR_CUSPE`.
+- **Entrar** (navbar, `data-acao="abrir-login"`, script parte F): **não navega mais** e **não tem mais a moeda entrando na meia**. As peças da ilustração (pílulas, X, pontilhado, laje azul com círculos, discos e meia) saem em sequência, afastando-se do centro e sumindo, e no lugar entra o **card de login**, com o foco no e-mail. Se a página estiver rolada, ela sobe antes. O X do card (ou a tecla Esc) fecha o card, devolve a ilustração pelo mesmo caminho e volta o foco ao Entrar.
+- **Card de login** (baseado na versão legada): "Acessar Sistema", "Entre com suas credenciais para acessar", E-mail, Senha, "Esqueceu sua senha?" (no azul do botão) e o botão **Fazer login**, que não se chama "Entrar" para não repetir o da navbar. Os campos são obrigatórios e têm validação nativa e autocomplete.
+- **Integração do login**: fica no envio do formulário, no script parte F: `entrar(dados)` / `concluirEntrar()` / `falharEntrar()`. Hoje não há requisição; o card mostra "Protótipo: o login ainda não está conectado ao sistema." A regra antiga, "animação da moeda antes do login", deixou de existir junto com a animação do Entrar.
+- **Pendente:** a rota de "Esqueceu sua senha?" (hoje `#`).
+
 ## Bibliotecas e o que instalar
 
 O topo do `index.html` traz a seção **BIBLIOTECAS E DEPENDÊNCIAS**. Em resumo:
@@ -59,23 +67,6 @@ O topo do `index.html` traz a seção **BIBLIOTECAS E DEPENDÊNCIAS**. Em resumo
 | CSS transitions + prefers-reduced-motion | Hovers, navbar, acessibilidade | Nativo | Não instala |
 
 Anime.js, ScrollReveal e Chart.js **não** são usados nesta página.
-
-## Entrar: animação primeiro, login depois (regra obrigatória)
-
-O `index.html` já vem pré-configurado para quando o botão **Entrar** passar a fazer requisição (fetch, server action, NextAuth, gov.br etc.). O fluxo fica no script, parte B:
-
-```
-clique em Entrar
-  ├─ animarMoedaNaMeia()  → Promise: resolve quando a moeda some na meia (~1,5s)
-  └─ entrar()             → Promise da requisição (começa já, em paralelo)
-Promise.all([animação, requisição])
-  → concluirEntrar()      → redireciona (ou falharEntrar() mostra o erro) SÓ AGORA
-```
-
-- **Onde integrar:** `entrar()` recebe a requisição; `concluirEntrar()` faz o redirecionamento; `falharEntrar()` mostra o erro. Hoje `entrar()` resolve na hora e `concluirEntrar()` segue o `href`.
-- **Por quê:** se a navegação acontecer no clique, ou assim que a API responder, a página troca no meio do voo e a microinteração se perde. A requisição começa em paralelo, então o usuário não espera mais do que o necessário. O que espera a animação é só a navegação.
-- **Ao converter para React/Next:** `const [, res] = await Promise.all([animarMoeda(), entrar()]); router.push(...)`. **Não** faça `await entrar(); router.push()` direto, nem use um `<a href>` que navega sozinho.
-- **Testado:** clique → a moeda some na meia → só então a navegação acontece.
 
 ## Portabilidade (React, Next.js, Vue etc.)
 

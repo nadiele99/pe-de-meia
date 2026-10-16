@@ -6,18 +6,20 @@
   =============================================================================
   COMO ESTE ARQUIVO ESTÁ ORGANIZADO
     1. <head>      → tokens + componentes do Design System, Tailwind e o CSS da página
-    2. Navbar      → componente do DS; o botão "Entrar" dispara a MOEDA NA MEIA
-    3. Hero        → título, descrição, CTA "Conheça o programa" e a arte (uma meia)
+    2. Navbar      → componente do DS; o botão "Entrar" troca a arte do hero pelo card de LOGIN
+    3. Hero        → título, descrição, CTA "Conheça o programa" e o palco: arte (meia clicável)
+                     OU card de login
     4. O sistema   → 3 cards
     5. Programa    → a CARTEIRA (a descrição fica na aba; moeda grande clicável) + pilares
     6. Fonte dos dados → 3 passos
     7. Rodapé      → componente do DS
     8. <script>    → as interações, todas comentadas:
                      A) utilitários compartilhados (moeda SVG, checagens)
-                     B) MOEDA NA MEIA      — clique em [data-moeda="meia"]
+                     B) MOEDINHAS DA MEIA  — clique na meia: sai uma moeda por clique
                      C) PULINHO NA CARTEIRA — clique em [data-moeda="carteira"] ou na própria moeda
                      D) BOTÃO VOLTAR AO TOPO — aparece quando o Hero sai da tela
                      E) DICA DO CADEADO — Esc fecha a dica de acesso restrito
+                     F) LOGIN NO LUGAR DA ARTE — "Entrar" troca a ilustração pelo card de login
 
   =============================================================================
   BIBLIOTECAS E DEPENDÊNCIAS: O QUE É USADO, PARA QUÊ, E O QUE INSTALAR
@@ -88,9 +90,10 @@
     tudo foi feito com as APIs nativas acima.
 
   PARA REAPROVEITAR AS ANIMAÇÕES DA MOEDA EM OUTRA PÁGINA
-    - Moeda na meia: copie o CSS "MOEDA (compartilhado)" + ".hero-arte" e as partes A + B do script.
+    - Moedinhas saindo da meia: copie o CSS "MOEDA (compartilhado)" + ".hero-arte" e as partes A + B do script.
+    - Troca arte ↔ login: copie o CSS "PALCO DO HERO" + "CARD DE LOGIN" e a parte F.
     - Pulinho na carteira: copie o CSS ".carteira" e as partes A + C do script.
-    - Marque o botão com data-moeda="meia" ou data-moeda="carteira".
+    - Marque o botão com data-moeda="carteira" (pulinho) ou data-acao="abrir-login" (login).
     - A estrutura de CAMADAS precisa existir (veja os comentários do hero e da carteira).
 
   =============================================================================
@@ -114,14 +117,17 @@
   ÁRVORE DE COMPONENTES (S = estático/servidor · C = precisa de JS no navegador;
   em Next.js App Router, os "C" levam 'use client')
     PaginaHome ........................................... S
-    ├─ Navbar ............................................ C  (NÃO fixa: rola com a página; botão Entrar com MoedaNaMeia)
+    ├─ Navbar ............................................ C  (NÃO fixa: rola com a página; Entrar abre o LoginCard)
     │    props: logoHref, links[{label, href}], entrarHref
     │    └─ AvisoAcesso .................................. S  cadeado + dica (CSS puro; Esc via JS, parte E)
     │         props: titulo, texto
     ├─ Hero .............................................. S
     │  ├─ (texto) props: tituloAntes, tituloDestaque, descricao(rich), cta{label, href}
-    │  └─ HeroArte ....................................... C  (alvo da MoedaNaMeia: precisa de refs para .meia e .moedas)
-    │       props: pilulas[{icone, cor, texto}]   (3 pílulas flutuantes)
+    │  └─ HeroPalco ...................................... C  estado modo: 'arte' | 'login' (classe .is-login)
+    │     ├─ HeroArte .................................... C  peças decorativas + MeiaBotao (refs .meia e .moedas)
+    │     │    props: pilulas[{icone, cor, texto}]   (3 pílulas flutuantes)
+    │     │    └─ MeiaBotao .............................. C  cada clique solta uma moeda (parte B)
+    │     └─ LoginCard ................................... C  formulário (parte F); props: titulo, subtitulo, esqueceuHref
     ├─ SecaoSistema ...................................... S  (fundo com marca d'água; eyebrow com meia)
     │    props: eyebrow, titulo, tituloDestaque, cards[]
     │    └─ CardFuncionalidade (data-item) ............... S  props: icone, tom('azul'|'amarelo'|'verde'), titulo, texto
@@ -150,15 +156,16 @@
     PeDeMeia.revelar()         → hook useReveal(ref) com IntersectionObserver, ou Framer
                                   Motion whileInView. Respeitar prefers-reduced-motion.
     PeDeMeia.hidratarIcones()  → NÃO portar: substituir por componentes lucide-react.
-    animarMoedaNaMeia (B)      → hook useMoedaNaMeia({ meiaRef, camadaRef }) que retorna
-                                  animar(ev): Promise<void>. O onClick do Entrar faz
-                                  Promise.all([animar(ev), entrar()]) e só DEPOIS navega
-                                  (ver "ORDEM OBRIGATÓRIA" no script, parte B). A moeda voadora pode ser
-                                  criada via document.createElement (como aqui) ou via
-                                  portal (createPortal) com estado; a lógica de coordenadas
-                                  e element.animate() continua igual.
-                                  Navbar e HeroArte estão em ramos diferentes: compartilhar
-                                  as refs por Context (ex.: MoedaContext) ou por um store.
+    soltarMoeda (B)            → onClick do MeiaBotao: cria a moeda (createElement ou lista de
+                                  moedas no estado) e anima com element.animate() usando refs
+                                  da meia e da camada .moedas. Sem trava: vários cliques = várias moedas.
+    abrirLogin / fecharLogin (F) → estado modo no HeroPalco ('arte' | 'login'). Navbar e
+                                  HeroPalco estão em ramos diferentes: expor abrirLogin() por
+                                  Context (ex.: LoginContext) ou por um store. Saída escalonada das
+                                  peças: element.animate() ou Framer Motion (AnimatePresence +
+                                  staggerChildren). Foco: e-mail ao abrir; botão Entrar ao fechar.
+    envio do formulário (F)    → onSubmit com preventDefault → await entrar({email, senha}) →
+                                  router.push(...) ou mensagem de erro (ver PONTO DE INTEGRAÇÃO).
     pularMoedaCarteira (C)     → MoedaCarteira com useRef + element.animate(); a trava
                                   "pulando" vira useRef<boolean> (não useState: não precisa
                                   re-renderizar).
@@ -186,12 +193,10 @@
     componente <MoedaSvg /> reaproveitado pelos dois.
 
   REGRAS QUE NÃO PODEM SE PERDER NA CONVERSÃO
-    - ENTRAR: a navegação/resultado do login acontece SÓ DEPOIS da animação da moeda
-      (Promise.all([animação, requisição]) → depois redireciona ou mostra erro).
-      A requisição começa em paralelo; o que espera é a navegação. Nunca redirecione
-      direto no clique nem assim que a API responder: a microinteração se perde.
-      Ponto de integração já pronto no script, parte B: entrar() / concluirEntrar() /
-      falharEntrar().
+    - ENTRAR (navbar) NÃO navega: troca a ilustração pelo card de login no próprio hero.
+      A requisição de login fica no ENVIO do formulário: ponto de integração pronto no
+      script, parte F: entrar(dados) / concluirEntrar() / falharEntrar().
+    - Arte e card ocupam a MESMA célula do grid (.hero-palco): só um aparece por vez.
     - Ordem de camadas (z-index) da HeroArte e da Carteira: a moeda fica ATRÁS da meia/aba.
     - transform-origin da .meia (50% 90%) e da .carteira__moeda (50% 100%): definem o "pulinho".
     - Sem animação com prefers-reduced-motion: reduce (os links funcionam normalmente).
@@ -336,15 +341,60 @@
     .hero-arte .meia-lua-verde { position: absolute; z-index: 1; right: 12%; bottom: 0; width: 112px; height: 56px; border-radius: 112px 112px 0 0; background: var(--verde); }
     .hero-arte .moedas { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
     /* transform-origin perto do pé: o "pulinho" da meia (squash and stretch) parte de baixo */
-    .hero-arte .meia { position: absolute; z-index: 3; left: 44%; top: 8px; height: 380px; width: auto; transform-origin: 50% 90%; filter: drop-shadow(0 18px 24px rgba(0,20,60,.25)); }
+    /* A MEIA é um <button> (cada clique solta uma moeda, script parte B). Botão sem
+       estilo de botão: só a imagem. A altura do botão define o tamanho; a imagem ocupa 100%. */
+    .hero-arte .meia { position: absolute; z-index: 3; left: 44%; top: 8px; height: 380px; width: auto;
+      padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+      transform-origin: 50% 90%; filter: drop-shadow(0 18px 24px rgba(0,20,60,.25)); }
+    .hero-arte .meia img { height: 100%; width: auto; display: block; pointer-events: none; }
+    .hero-arte .meia:focus-visible { outline: 3px solid var(--azul-institucional); outline-offset: 6px; border-radius: 18px; }
     .hero-arte .flutua { position: absolute; z-index: 4; }
     .hero-arte .f1 { left: 0; top: 120px; transform: rotate(-4deg); }
     .hero-arte .f2 { left: 8%; top: 200px; transform: rotate(3deg); }
     .hero-arte .f3 { right: 3%; top: 96px; transform: rotate(-2deg); }
     .hero-arte .pdm-chip { font-size: 14px; padding: 10px 16px; }
 
-    /* ===================== MOEDA (compartilhado)  → MoedaSvg / hook useMoedaNaMeia =====================
-       Elemento criado via JS (função criarMoeda) para as duas animações.
+    /* ===================== PALCO DO HERO  → componente HeroPalco =====================
+       Uma célula de grid com DUAS camadas empilhadas (grid-area 1/1): a arte e o
+       card de login. O script (parte F) alterna entre elas. */
+    .hero-palco { display: grid; align-items: center; justify-items: center; width: 100%; }
+    .hero-palco > .hero-arte, .hero-palco > .login-card { grid-area: 1 / 1; }
+
+    /* ===================== CARD DE LOGIN  → componente LoginCard =====================
+       Baseado na tela de login da versão legada. Cores/raios/sombras do DS.
+       Campos com ícone à esquerda (Lucide mail/lock), foco com anel azul-pdm. */
+    .login-card { position: relative; z-index: 2; width: 100%; max-width: 400px; padding: 32px 28px 22px;
+      border-radius: var(--radius-lg); background: var(--branco); border: 1px solid var(--linha);
+      box-shadow: 0 24px 48px rgba(0,46,125,.14); text-align: left; }
+    .login-card[hidden] { display: none; }
+    .login-card__fechar { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%; border: 0;
+      display: grid; place-items: center; cursor: pointer; background: var(--superficie); color: var(--ink-muted);
+      transition: background-color .2s ease, color .2s ease; }
+    .login-card__fechar:hover { background: var(--azul-50); color: var(--azul-institucional); }
+    .login-card__fechar:focus-visible { outline: 3px solid var(--azul-institucional); outline-offset: 2px; }
+    .login-card__fechar svg { width: 16px; height: 16px; }
+    .login-card__titulo { margin: 0; font: 700 24px/30px var(--font-display); letter-spacing: -0.01em; color: var(--ink); }
+    .login-card__sub { margin: 6px 0 24px; font: 400 14px/22px var(--font-sans); color: var(--ink-muted); }
+    .login-card__form { display: grid; gap: 16px; }
+    .login-campo { display: grid; gap: 6px; }
+    .login-campo__linha { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .login-campo__rotulo { font: 600 13px/18px var(--font-sans); color: var(--ink); }
+    /* "Esqueceu sua senha?": mesmo azul do botão Fazer login (azul-institucional), mais sóbrio que o azul-pdm */
+    .login-link { font: 600 13px/18px var(--font-sans); color: var(--azul-institucional); text-decoration: none; }
+    .login-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .login-campo__caixa { position: relative; display: block; }
+    .login-campo__caixa .pdm-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--ink-muted); pointer-events: none; }
+    .login-campo__caixa input { width: 100%; height: 46px; padding: 0 14px 0 42px; border: 1px solid var(--linha); border-radius: var(--radius-sm);
+      font: 400 15px/20px var(--font-sans); color: var(--ink); background: var(--branco); transition: border-color .2s ease, box-shadow .2s ease; }
+    .login-campo__caixa input::placeholder { color: #7d889e; }
+    .login-campo__caixa input:focus { outline: none; border-color: var(--azul-pdm); box-shadow: 0 0 0 3px rgba(18,59,254,.15); }
+    .login-card__entrar { width: 100%; height: 46px; justify-content: center; margin-top: 4px; font-size: 15px; }
+    .login-card__entrar:disabled { opacity: .7; cursor: progress; transform: none; }
+    .login-card__aviso { margin: 0; min-height: 18px; font: 400 13px/18px var(--font-sans); color: var(--ink-muted); text-align: center; }
+    .login-card__aviso.is-erro { color: var(--vermelho-700); }
+
+    /* ===================== MOEDA (compartilhado)  → MoedaSvg =====================
+       Elemento criado via JS (função criarMoeda) para as moedinhas que saem da meia.
        44×44px, desenho SVG autoral nas cores amarelo/amarelo-600.
        will-change:transform deixa o navegador animar na GPU (só transform muda). */
     .moeda-voo { width: 44px; height: 44px; left: 0; top: 0; pointer-events: none; will-change: transform; }
@@ -474,7 +524,7 @@
        props: logoHref, links[{label, href}] (máx. 4), entrarHref
        filho: AvisoAcesso (cadeado ao lado do Entrar; dica ao passar o mouse/focar)
        comportamento: sem sombra de rolagem (não é fixa);
-                      Entrar com data-moeda="meia" → MOEDA NA MEIA (script, parte B)
+                      Entrar com data-acao="abrir-login" → troca a arte pelo LoginCard (parte F)
        =================================================================== -->
   <div class="pdm-nav-wrap" data-component="Navbar">
     <nav class="pdm-nav" id="nav" aria-label="Principal">
@@ -495,11 +545,10 @@
             <span data-prop="texto">Exclusivo para gestores e servidores autorizados.</span>
           </span>
         </span>
-        <!-- TODO: trocar "#" pela URL da tela de login.
-             Se o Entrar passar a fazer requisição, coloque-a em entrar() (script, parte B):
-             o redirecionamento só acontece DEPOIS da moeda entrar na meia. -->
+        <!-- Entrar NÃO navega: abre o card de login no lugar da ilustração (script, parte F).
+             A requisição de login vai em entrar() (PONTO DE INTEGRAÇÃO, parte F). -->
 
-        <a class="pdm-btn pdm-btn--primario" href="#" data-prop="entrarHref" data-moeda="meia"><i data-icon="log-in"></i>Entrar</a>
+        <a class="pdm-btn pdm-btn--primario" href="#login" data-acao="abrir-login"><i data-icon="log-in"></i>Entrar</a>
       </div>
     </nav>
   </div>
@@ -537,31 +586,79 @@
       </div>
 
       <!-- =================================================================
-           COMPONENTE: HeroArte  ·  C (alvo da MOEDA NA MEIA)  ·  decorativo
-           Uma meia (peça oficial do logo) sobre a laje azul + 3 pílulas.
-           props: pilulas[{icone, cor('verde-700'|'azul-pdm'|'amarelo-ink'), texto}]
-           refs necessárias em React: .meia (meiaRef) e .moedas (camadaRef).
-           CAMADAS (z-index) descritas no CSS ".hero-arte". Não remova .moedas:
-           é para lá que a moeda vai na etapa final, atrás da meia.
+           COMPONENTE: HeroPalco  ·  C  ·  a área à direita do título
+           Grid de UMA célula com duas camadas no mesmo lugar: a ilustração
+           (HeroArte) e o card de login (LoginCard). Só uma aparece por vez:
+           o "Entrar" troca a arte pelo card (script, parte F); o X do card volta.
+           Estado: classe .is-login no .hero-palco.
            ================================================================= -->
-      <div class="hero-arte" aria-hidden="true" data-pdm-reveal style="--pdm-delay:120ms" data-component="HeroArte">
-        <div class="disco-claro"></div>                                    <!-- camada 1: cenário -->
+      <div class="hero-palco" data-component="HeroPalco">
+
+      <!-- =================================================================
+           COMPONENTE: HeroArte  ·  C  ·  ilustração (peças decorativas)
+           Uma meia (peça oficial do logo) sobre a laje azul + 3 pílulas.
+           A MEIA é um <button>: cada clique solta uma moedinha (script, parte B).
+           props: pilulas[{icone, cor('verde-700'|'azul-pdm'|'amarelo-ink'), texto}]
+           refs em React: .meia (meiaRef) e .moedas (camadaRef).
+           CAMADAS (z-index) descritas no CSS ".hero-arte". Não remova .moedas:
+           é a camada ATRÁS da meia por onde a moeda sobe antes de sair pela boca.
+           Peças decorativas levam aria-hidden; só a meia (botão) é acessível.
+           ================================================================= -->
+      <div class="hero-arte" data-pdm-reveal style="--pdm-delay:120ms" data-component="HeroArte">
+        <div class="disco-claro" aria-hidden="true"></div>                    <!-- camada 1: cenário -->
         <!-- laje "digital": grade no CSS + círculos concêntricos + zigue-zague -->
-        <div class="laje">                                                 <!-- camada 1: cenário -->
+        <div class="laje" aria-hidden="true">                                 <!-- camada 1: cenário -->
           <svg class="laje__circulos"><use href="#g-circulos"/></svg>
           <svg class="laje__zigue"><use href="#g-zigue"/></svg>
         </div>
         <!-- grafismos da arte (camada 1, atrás da meia e das pílulas) -->
         <svg class="grafismo text-amarelo" aria-hidden="true" style="z-index:1; right:4%; top:18px; width:34px; height:34px"><use href="#g-x"/></svg>
         <svg class="grafismo text-verde" aria-hidden="true" style="z-index:1; left:30%; top:16px; width:30px; height:48px"><use href="#g-pontos"/></svg>
-        <div class="meia-lua-verde"></div>                                 <!-- camada 1: cenário -->
-        <div class="moedas"></div>                                         <!-- camada 2: moeda na etapa final -->
-        <img class="meia" src="assets/pe-de-meia-meia.svg" alt="">        <!-- camada 3: a meia, na frente -->
+        <div class="meia-lua-verde" aria-hidden="true"></div>                 <!-- camada 1: cenário -->
+        <div class="moedas" aria-hidden="true"></div>                         <!-- camada 2: moeda subindo por dentro da meia -->
+        <!-- camada 3: a MEIA, clicável (cada clique solta uma moeda) -->
+        <button type="button" class="meia" aria-label="Meia do Pé-de-Meia: clique para soltar uma moeda" data-component="MeiaBotao">
+          <img src="assets/pe-de-meia-meia.svg" alt="">
+        </button>
         <!-- camada 4: pílulas (f1, f2, f3 = posições fixas no CSS) -->
-        <span class="flutua f1 pdm-chip pdm-chip--branco" data-item="Pilula"><span class="text-verde-700" data-prop="cor"><i data-icon="calendar-check"></i></span><span data-prop="texto">Frequência mensal</span></span>
-        <span class="flutua f2 pdm-chip pdm-chip--branco" data-item="Pilula"><span class="text-azul-pdm" data-prop="cor"><i data-icon="circle-check"></i></span><span data-prop="texto">Elegibilidade</span></span>
-        <span class="flutua f3 pdm-chip pdm-chip--branco" data-item="Pilula"><span class="text-amarelo-ink" data-prop="cor"><i data-icon="refresh-cw"></i></span><span data-prop="texto">Dados do SGP</span></span>
+        <span class="flutua f1 pdm-chip pdm-chip--branco" aria-hidden="true" data-item="Pilula"><span class="text-verde-700" data-prop="cor"><i data-icon="calendar-check"></i></span><span data-prop="texto">Frequência mensal</span></span>
+        <span class="flutua f2 pdm-chip pdm-chip--branco" aria-hidden="true" data-item="Pilula"><span class="text-azul-pdm" data-prop="cor"><i data-icon="circle-check"></i></span><span data-prop="texto">Elegibilidade</span></span>
+        <span class="flutua f3 pdm-chip pdm-chip--branco" aria-hidden="true" data-item="Pilula"><span class="text-amarelo-ink" data-prop="cor"><i data-icon="refresh-cw"></i></span><span data-prop="texto">Dados do SGP</span></span>
       </div>
+
+      <!-- =================================================================
+           COMPONENTE: LoginCard  ·  C  ·  aparece no lugar da HeroArte
+           Baseado na tela de login da versão legada: "Acessar Sistema", e-mail,
+           senha, "Esqueceu sua senha?" e botão Entrar. Começa oculto (hidden).
+           Envio: script, parte F (PONTO DE INTEGRAÇÃO DO LOGIN: entrar()).
+           props: titulo, subtitulo, esqueceuHref
+           TODO: trocar o href de "Esqueceu sua senha?" pela rota de recuperação.
+           ================================================================= -->
+      <section class="login-card" id="login" aria-labelledby="login-titulo" hidden data-component="LoginCard">
+        <button type="button" class="login-card__fechar" aria-label="Fechar o login e voltar à ilustração">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+        <h2 class="login-card__titulo" id="login-titulo" data-prop="titulo">Acessar Sistema</h2>
+        <p class="login-card__sub" data-prop="subtitulo">Entre com suas credenciais para acessar</p>
+        <form class="login-card__form" action="#" method="post">
+          <div class="login-campo">
+            <label class="login-campo__rotulo" for="login-email">E-mail</label>
+            <span class="login-campo__caixa"><i data-icon="mail"></i><input id="login-email" name="email" type="email" autocomplete="username" placeholder="seu@email.com" required></span>
+          </div>
+          <div class="login-campo">
+            <div class="login-campo__linha">
+              <label class="login-campo__rotulo" for="login-senha">Senha</label>
+              <a class="login-link" href="#" data-prop="esqueceuHref">Esqueceu sua senha?</a>
+            </div>
+            <span class="login-campo__caixa"><i data-icon="lock"></i><input id="login-senha" name="senha" type="password" autocomplete="current-password" placeholder="••••••••" required></span>
+          </div>
+          <!-- rótulo "Fazer login" (e não "Entrar") para não repetir o botão da navbar -->
+          <button type="submit" class="pdm-btn pdm-btn--primario login-card__entrar"><i data-icon="log-in"></i>Fazer login</button>
+          <p class="login-card__aviso" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      </div><!-- /hero-palco -->
     </section>
 
     <!-- ===================================================================
@@ -802,16 +899,14 @@
       '<circle cx="22.5" cy="22.5" r="12.5" fill="none" stroke="var(--amarelo-600)" stroke-width="3"/>' +
       '<path d="M13 15a12 12 0 0 1 7-5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".75"/></svg>';
 
-    // Cria a moeda VOADORA (usada só na parte B) e a coloca no <body>.
-    // position:fixed → coordenadas da TELA (viewport), iguais às do clique.
-    // z-index 60: acima da navbar (50) enquanto a moeda está "no ar".
-    function criarMoeda() {
+    // Cria uma moeda (usada na parte B) dentro de "pai", com position absolute:
+    // as coordenadas passadas a posicionar() são relativas a esse pai.
+    function criarMoeda(posicao, pai) {
       var el = document.createElement('div');
       el.className = 'moeda-voo';
       el.innerHTML = SVG_MOEDA;
-      el.style.position = 'fixed';
-      el.style.zIndex = '60';
-      document.body.appendChild(el);
+      el.style.position = posicao || 'absolute';
+      (pai || document.body).appendChild(el);
       return el;
     }
 
@@ -820,161 +915,235 @@
       return 'translate(' + (x - METADE) + 'px,' + (y - METADE) + 'px) rotate(' + rot + 'deg) scale(' + (escala == null ? 1 : escala) + ')';
     }
 
-    // Ponto inicial da moeda: onde está o mouse; se o clique veio do teclado
-    // (Enter, sem coordenadas), usa o centro do botão.
-    function pontoInicial(ev, link) {
-      if (ev.clientX || ev.clientY) return { x: ev.clientX, y: ev.clientY };
-      var b = link.getBoundingClientRect();
-      return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
-    }
 
     /* -------------------------------------------------------------------
-       B) MOEDA NA MEIA — botão "Entrar" da navbar  [data-moeda="meia"]
+       B) MOEDINHAS SAINDO DA MEIA — clique na meia  (.hero-arte .meia, um <button>)
        -------------------------------------------------------------------
-       O QUE ACONTECE
-         1. Nasce uma moeda no ponto do clique (aparece crescendo de 0.2 a 1).
-         2. Ela voa em ARCO até logo acima da boca da meia, girando 360°.
-            O arco é uma curva de Bézier quadrática: início → ponto de controle
-            (160px acima do ponto mais alto) → destino, amostrada em 14 quadros.
-            Durante o voo a moeda está em position:fixed, por cima de tudo.
-         3. TROCA DE CAMADA: ao chegar, a moeda é movida para .hero-arte .moedas
-            (z-index 2), que fica ATRÁS da .meia (z-index 3). Ela desce pelo cano
-            e a meia a esconde. É isso que dá a ilusão de "entrar na meia".
-         4. A meia dá um "pulinho" (squash and stretch: achata, estica, volta),
-            com transform-origin no pé (definido no CSS).
-         5. PAUSA_FINAL ms depois, a animação é dada como concluída e SÓ ENTÃO
-            o login prossegue (veja "ORDEM OBRIGATÓRIA" logo abaixo).
-       QUANDO NÃO ANIMA (a promessa da animação resolve na hora)
-         - "reduzir movimento" ligado, navegador sem Web Animations API, ou a
-           meia fora da tela (ex.: usuário já rolou a página para baixo).
-
-       ┌──────────────────────────────────────────────────────────────────┐
-       │ ORDEM OBRIGATÓRIA: ANIMAÇÃO PRIMEIRO, RESULTADO DO LOGIN DEPOIS  │
-       └──────────────────────────────────────────────────────────────────┘
-       Neste protótipo o "Entrar" não faz requisição: só segue para o href.
-       Mas o fluxo já está PRÉ-CONFIGURADO para quando fizer (fetch, server
-       action, NextAuth signIn(), OAuth/gov.br etc.):
-
-         clique em Entrar
-           ├─ animarMoedaNaMeia()  → Promise que resolve quando a moeda some na meia
-           └─ entrar()             → Promise da requisição (começa JÁ, em paralelo)
-         Promise.all([animação, requisição])
-           → concluirEntrar()      → redireciona / mostra erro SÓ AGORA
-
-       Por que: se o redirecionamento acontecer assim que a requisição
-       responder, a página troca no meio do voo e a microinteração se perde.
-       A requisição pode (e deve) começar em paralelo para não atrasar o
-       usuário; o que espera a animação é a NAVEGAÇÃO ou a mensagem de erro.
-       Tempo máximo que a animação segura o usuário: DUR_VOO + DUR_DESCIDA +
-       PAUSA_FINAL ≈ 1,5s. Não encurte abaixo disso sem rever a animação.
-
-       AO CONVERTER (React/Next/etc.), MANTENHA ESTA REGRA:
-         const [_, resultado] = await Promise.all([animarMoeda(), entrar()]);
-         router.push(...)  // ou exibir erro, sempre DEPOIS do Promise.all
-       NÃO faça: onClick → await entrar() → router.push() (mata a animação).
-       NÃO use <a href> navegando direto, nem form submit sem preventDefault.
+       O QUE ACONTECE (a cada clique, UMA moeda)
+         1. A meia dá um "cuspe": estica para cima e volta (squash and stretch,
+            transform-origin no pé, definido no CSS).
+         2. A moeda nasce DENTRO do cano da meia, na camada .moedas (z-index 2),
+            que fica ATRÁS da meia (z-index 3). Ela sobe até a boca: enquanto está
+            dentro, a meia a esconde; ao passar da boca, aparece.
+         3. TROCA DE CAMADA: ao sair da boca, a moeda vai para a frente (z-index 5)
+            e faz um ARCO para um dos lados (Bézier quadrática amostrada em 14
+            quadros), girando, até cair abaixo da boca e sumir (opacity → 0).
+         4. A moeda é removida do DOM no fim. Cliques seguidos geram moedas
+            independentes (não há trava: dá para "chover" moedas).
+       QUANDO NÃO ANIMA
+         "reduzir movimento" ligado ou navegador sem Web Animations API.
        ONDE AJUSTAR
          - Boca da meia (unidades do viewBox 156×278 do SVG oficial):
-           BOCA_ACIMA = onde o voo termina; BOCA_DENTRO = fim da descida.
-           O cano da meia desce para a ESQUERDA, por isso x diminui e y aumenta.
-         - Altura do arco: ALTURA_ARCO. Durações: DUR_VOO, DUR_DESCIDA, DUR_PULO.
+           BOCA_FORA = ponto logo acima da boca; BOCA_DENTRO = onde a moeda nasce.
+         - ALTURA_SALTO (px acima da boca), DISTANCIA_LADO (px para o lado),
+           QUEDA (px abaixo da boca), DUR_SUBIDA, DUR_ARCO, DUR_CUSPE.
+       EM REACT
+         MeiaBotao com refs para a meia e para a camada .moedas; cada clique cria
+         a moeda (document.createElement ou estado com lista de moedas) e chama
+         element.animate() com os mesmos quadros.
        ------------------------------------------------------------------- */
     var arteHero = document.querySelector('.hero-arte');
     var meia = arteHero && arteHero.querySelector('.meia');
     var camadaMeia = arteHero && arteHero.querySelector('.moedas');
 
     var MEIA_VIEWBOX_L = 156;               // largura do viewBox do SVG da meia
-    var BOCA_ACIMA  = { x: 144, y: -20 };   // um pouco acima e fora da boca
-    var BOCA_DENTRO = { x: 86,  y: 86 };    // dentro do cano, já coberto pela meia
-    var ALTURA_ARCO = 160, DUR_VOO = 900, DUR_DESCIDA = 380, DUR_PULO = 420;
-    var PAUSA_FINAL = 250;  // respiro depois que a moeda some, antes de liberar o login
+    var BOCA_FORA   = { x: 144, y: -20 };   // um pouco acima e fora da boca
+    var BOCA_DENTRO = { x: 86,  y: 86 };    // dentro do cano, coberto pela meia
+    var ALTURA_SALTO = 120, DISTANCIA_LADO = 170, QUEDA = 260;
+    var DUR_SUBIDA = 300, DUR_ARCO = 950, DUR_CUSPE = 380;
 
-    /* ===== PONTO DE INTEGRAÇÃO DO LOGIN (pré-configurado) =====================
-       entrar(link)  → coloque AQUI a requisição de login. Deve RETORNAR uma
-                       Promise. Hoje não há requisição: resolve na hora.
-                       Exemplo:
-                         return fetch('/api/login', { method: 'POST', body: ... })
-                           .then(function (r) { if (!r.ok) throw r; return r.json(); });
-       concluirEntrar(link, resultado) → o que fazer DEPOIS da animação e da
-                       requisição: redirecionar, abrir o formulário, etc.
-                       Hoje: segue para o href do botão (se não for "#").
-       falharEntrar(link, erro) → mostrar o erro, também DEPOIS da animação.
-       ========================================================================= */
-    function entrar(link) {
-      return Promise.resolve(null);   // ← sem requisição neste protótipo
-    }
-    function concluirEntrar(link, resultado) {
-      var href = link.getAttribute('href');
-      if (href && href !== '#') window.location.href = href;
-    }
-    function falharEntrar(link, erro) {
-      console.error('Falha ao entrar', erro);  // ← trocar por mensagem na tela
-    }
-
-    // Clique em "Entrar": dispara animação e requisição juntas e só conclui
-    // quando AS DUAS terminam (ver "ORDEM OBRIGATÓRIA" acima).
-    function aoClicarEntrar(ev, link) {
-      ev.preventDefault();                       // o JS controla a navegação daqui em diante
-      var animacao = animarMoedaNaMeia(ev, link);
-      var requisicao = entrar(link);             // começa em paralelo, não espera a animação
-      Promise.all([animacao, requisicao])
-        .then(function (res) { concluirEntrar(link, res[1]); })
-        .catch(function (erro) { animacao.then(function () { falharEntrar(link, erro); }); });
-    }
-
-    // Retorna SEMPRE uma Promise: resolve quando a moeda sumiu na meia
-    // (ou na hora, quando não há animação).
-    function animarMoedaNaMeia(ev, link) {
-      if (!meia || reduzMovimento.matches || !temWAAPI) return Promise.resolve();
-      var r = meia.getBoundingClientRect();
-      if (r.bottom < 0 || r.top > window.innerHeight) return Promise.resolve();  // meia fora da tela
-
-      // Converte pontos do viewBox da meia para pixels da tela.
+    function soltarMoeda() {
+      if (!meia || reduzMovimento.matches || !temWAAPI) return;
+      // coordenadas relativas à .hero-arte (a moeda vive dentro dela)
+      var a = arteHero.getBoundingClientRect(), r = meia.getBoundingClientRect();
       var u = r.width / MEIA_VIEWBOX_L;
-      var acima  = { x: r.left + BOCA_ACIMA.x * u,  y: r.top + BOCA_ACIMA.y * u };
-      var dentro = { x: r.left + BOCA_DENTRO.x * u, y: r.top + BOCA_DENTRO.y * u };
-      var ini = pontoInicial(ev, link);
-      var ctrl = { x: (ini.x + acima.x) / 2, y: Math.min(ini.y, acima.y) - ALTURA_ARCO };
+      var dentro = { x: r.left - a.left + BOCA_DENTRO.x * u, y: r.top - a.top + BOCA_DENTRO.y * u };
+      var boca   = { x: r.left - a.left + BOCA_FORA.x * u,   y: r.top - a.top + BOCA_FORA.y * u };
 
-      // ETAPA 1-2: voo em arco (camada fixa, por cima da página)
-      var moeda = criarMoeda();
-      var quadros = [{ transform: posicionar(ini.x, ini.y, 0, .2), opacity: 0, offset: 0 }];
-      var N = 14;
-      for (var i = 1; i <= N; i++) {
-        var t = i / N, mt = 1 - t;
-        // Bézier quadrática: B(t) = (1-t)²·P0 + 2(1-t)t·P1 + t²·P2
-        var x = mt * mt * ini.x + 2 * mt * t * ctrl.x + t * t * acima.x;
-        var y = mt * mt * ini.y + 2 * mt * t * ctrl.y + t * t * acima.y;
-        quadros.push({ transform: posicionar(x, y, Math.round(360 * t)), opacity: 1, offset: 0.1 + 0.9 * t });
+      // ETAPA 1: "cuspe" da meia (estica e volta)
+      meia.animate([
+        { transform: 'scale(1,1)' },
+        { transform: 'scale(.95,1.06)', offset: .35 },  // estica para cima ao soltar a moeda
+        { transform: 'scale(1.03,.97)', offset: .7 },
+        { transform: 'scale(1,1)' }
+      ], { duration: DUR_CUSPE, easing: 'ease-out' });
+
+      // ETAPA 2: moeda sobe por dentro do cano (camada ATRÁS da meia)
+      var moeda = criarMoeda('absolute', camadaMeia);
+      var sobe = moeda.animate([
+        { transform: posicionar(dentro.x, dentro.y, 0, .9) },
+        { transform: posicionar(boca.x, boca.y, -40) }
+      ], { duration: DUR_SUBIDA, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+
+      sobe.finished.then(function () {
+        // ETAPA 3: troca de camada → na FRENTE da meia, e arco para um lado
+        moeda.style.zIndex = '5';
+        arteHero.appendChild(moeda);
+        var lado = Math.random() < 0.65 ? 1 : -1;               // mais vezes para a direita (lado da boca)
+        var dx = lado * (DISTANCIA_LADO * (0.45 + Math.random() * 0.55));
+        var fim = { x: boca.x + dx, y: boca.y + QUEDA };
+        var ctrl = { x: boca.x + dx * 0.5, y: boca.y - ALTURA_SALTO * 2 }; // controle 2× acima → pico ≈ ALTURA_SALTO
+        var giro = lado * (360 + Math.random() * 360);
+        var quadros = [], N = 14;
+        for (var i = 0; i <= N; i++) {
+          var t = i / N, mt = 1 - t;
+          // Bézier quadrática: B(t) = (1-t)²·P0 + 2(1-t)t·P1 + t²·P2
+          var x = mt * mt * boca.x + 2 * mt * t * ctrl.x + t * t * fim.x;
+          var y = mt * mt * boca.y + 2 * mt * t * ctrl.y + t * t * fim.y;
+          quadros.push({ transform: posicionar(x, y, -40 + giro * t), opacity: t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3, offset: t });
+        }
+        return moeda.animate(quadros, { duration: DUR_ARCO, easing: 'cubic-bezier(.3,.1,.6,1)', fill: 'forwards' }).finished;
+      }).then(function () { moeda.remove(); });   // ETAPA 4: limpa
+    }
+    if (meia) meia.addEventListener('click', soltarMoeda);
+
+    /* -------------------------------------------------------------------
+       F) LOGIN NO LUGAR DA ARTE — clique em "Entrar"  [data-acao="abrir-login"]
+       -------------------------------------------------------------------
+       O QUE ACONTECE AO ABRIR
+         1. Se a ilustração estiver fora da tela (usuário rolou), a página sobe
+            até o topo antes (scroll suave) e só então abre.
+         2. SAÍDA DA ARTE: cada peça da .hero-arte (pílulas, X, pontilhado, laje
+            azul com círculos, discos, meia) some em sequência (ESCALONA ms entre
+            uma e outra): afasta-se um pouco do centro da arte, encolhe e
+            desaparece (opacity → 0). Só transform/opacity.
+         3. ENTRADA DO CARD: o .login-card (que ocupa a MESMA célula do grid que a
+            arte, em .hero-palco) aparece subindo 16px com fade, e o foco vai para
+            o campo de e-mail.
+       AO FECHAR (botão X do card ou Esc com o foco no card)
+         O card sai (fade), as peças da arte voltam em sequência e o foco volta
+         para o botão "Entrar" que abriu o login.
+       ACESSIBILIDADE
+         O card é uma <section aria-labelledby>, com <label> em cada campo e
+         autocomplete (username / current-password). A mensagem de retorno usa
+         role="status" (aria-live), então leitores de tela a anunciam.
+       ONDE AJUSTAR
+         DUR_SAIDA, ESCALONA, AFASTAR (quanto as peças se afastam do centro),
+         DUR_ENTRADA, DUR_FECHAR.
+       EM REACT
+         Estado modo: 'arte' | 'login' no componente HeroPalco; a saída/entrada
+         com element.animate() em refs (ou Framer Motion AnimatePresence com
+         staggerChildren). O "Entrar" da Navbar chama abrirLogin() via Context.
+       ------------------------------------------------------------------- */
+    var palco = document.querySelector('.hero-palco');
+    var cardLogin = document.getElementById('login');
+    var formLogin = cardLogin && cardLogin.querySelector('form');
+    var avisoLogin = cardLogin && cardLogin.querySelector('.login-card__aviso');
+    var DUR_SAIDA = 360, ESCALONA = 45, AFASTAR = 0.35, DUR_ENTRADA = 420, DUR_FECHAR = 220;
+    var animacoesSaida = [], quemAbriu = null;
+
+    function semMovimento() { return reduzMovimento.matches || !temWAAPI; }
+    function pecasDaArte() {                       // tudo que aparece na arte, menos a camada de moedas
+      return Array.prototype.filter.call(arteHero.children, function (el) { return !el.classList.contains('moedas'); });
+    }
+
+    function abrirLogin(gatilho) {
+      if (!palco || !cardLogin) return;
+      quemAbriu = gatilho || null;
+      if (palco.classList.contains('is-login')) { focarEmail(); return; }   // já aberto
+      var r = palco.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight) {                     // fora da tela: sobe antes
+        window.scrollTo({ top: 0, behavior: semMovimento() ? 'auto' : 'smooth' });
+        setTimeout(function () { trocarParaLogin(); }, semMovimento() ? 0 : 450);
+      } else {
+        trocarParaLogin();
       }
-      var voo = moeda.animate(quadros, { duration: DUR_VOO, easing: 'cubic-bezier(.4,0,.3,1)', fill: 'forwards' });
+    }
 
-      return voo.finished.then(function () {
-        // ETAPA 3: troca de camada → atrás da meia. Coordenadas passam a ser relativas à .hero-arte.
-        var a = arteHero.getBoundingClientRect();
-        moeda.style.position = 'absolute';
-        moeda.style.zIndex = '';
-        camadaMeia.appendChild(moeda);
-        var desce = moeda.animate([
-          { transform: posicionar(acima.x - a.left, acima.y - a.top, 360) },
-          { transform: posicionar(dentro.x - a.left, dentro.y - a.top, 380) }
-        ], { duration: DUR_DESCIDA, easing: 'cubic-bezier(.55,0,.8,.3)', fill: 'forwards' }); // acelera, como se caísse
-
-        // ETAPA 4: pulinho da meia (começa um pouco antes da moeda sumir)
-        meia.animate([
-          { transform: 'scale(1,1)' },
-          { transform: 'scale(1.06,.94)', offset: .4 },   // achata ao "receber" a moeda
-          { transform: 'scale(.98,1.03)', offset: .7 },   // estica de volta
-          { transform: 'scale(1,1)' }
-        ], { duration: DUR_PULO, delay: DUR_DESCIDA - 120, easing: 'ease-out' });
-        return desce.finished;
-      }).then(function () {
-        // ETAPA 5: limpa a moeda e, após PAUSA_FINAL, resolve a Promise da animação.
-        // Quem decide o que vem depois é aoClicarEntrar (não navegue daqui).
-        moeda.remove();
-        return new Promise(function (ok) { setTimeout(ok, PAUSA_FINAL); });
+    function trocarParaLogin() {
+      palco.classList.add('is-login');
+      var instantaneo = semMovimento();
+      var c = arteHero.getBoundingClientRect(), cx = c.left + c.width / 2, cy = c.top + c.height / 2;
+      animacoesSaida = pecasDaArte().map(function (el, i) {
+        var r = el.getBoundingClientRect();
+        var dx = (r.left + r.width / 2 - cx) * AFASTAR, dy = (r.top + r.height / 2 - cy) * AFASTAR;
+        var base = getComputedStyle(el).transform; base = base === 'none' ? '' : base;  // preserva rotação das pílulas
+        return el.animate([
+          { opacity: 1, transform: (base || 'none') },
+          { opacity: 0, transform: 'translate(' + dx + 'px,' + dy + 'px) ' + base + ' scale(.85)' }
+        ], { duration: instantaneo ? 0 : DUR_SAIDA, delay: instantaneo ? 0 : i * ESCALONA, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+      });
+      Promise.all(animacoesSaida.map(function (an) { return an.finished; })).then(function () {
+        arteHero.style.visibility = 'hidden';          // tira a arte do alcance de cliques/foco
+        cardLogin.hidden = false;
+        if (!instantaneo) cardLogin.animate([
+          { opacity: 0, transform: 'translateY(16px) scale(.98)' },
+          { opacity: 1, transform: 'none' }
+        ], { duration: DUR_ENTRADA, easing: 'cubic-bezier(.2,.7,.2,1)' });
+        var rc = cardLogin.getBoundingClientRect();     // no celular o card fica abaixo do título: garante que apareça
+        if (rc.top < 0 || rc.bottom > window.innerHeight) cardLogin.scrollIntoView({ block: 'center', behavior: instantaneo ? 'auto' : 'smooth' });
+        focarEmail();
       });
     }
+
+    function focarEmail() {
+      var email = cardLogin.querySelector('input[type="email"]');
+      if (email) email.focus({ preventScroll: true });
+    }
+
+    function fecharLogin() {
+      if (!palco || !palco.classList.contains('is-login')) return;
+      var instantaneo = semMovimento();
+      var sai = instantaneo ? null : cardLogin.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(8px)' }], { duration: DUR_FECHAR, easing: 'ease-in' });
+      (sai ? sai.finished : Promise.resolve()).then(function () {
+        cardLogin.hidden = true;
+        arteHero.style.visibility = '';
+        animacoesSaida.forEach(function (an) {                     // peças voltam pelo mesmo caminho
+          an.reverse();
+          an.finished.then(function () { an.cancel(); });          // ao terminar, devolve o controle ao CSS
+        });
+        animacoesSaida = [];
+        palco.classList.remove('is-login');
+        if (avisoLogin) { avisoLogin.textContent = ''; avisoLogin.classList.remove('is-erro'); }
+        if (quemAbriu) quemAbriu.focus({ preventScroll: true });
+      });
+    }
+
+    if (cardLogin) {
+      cardLogin.querySelector('.login-card__fechar').addEventListener('click', fecharLogin);
+      cardLogin.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') fecharLogin(); });
+    }
+
+    /* ===== PONTO DE INTEGRAÇÃO DO LOGIN (pré-configurado) =====================
+       O formulário só chega aqui se for válido (validação nativa: e-mail e senha
+       obrigatórios, e-mail no formato certo).
+       entrar(dados)  → coloque AQUI a requisição de login. Recebe {email, senha}
+                        e deve RETORNAR uma Promise. Hoje não há requisição.
+                        Exemplo:
+                          return fetch('/api/login', { method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(dados) })
+                            .then(function (r) { if (!r.ok) throw r; return r.json(); });
+       concluirEntrar(resultado) → depois do sucesso: redirecionar para o sistema.
+       falharEntrar(erro)        → mensagem de erro no próprio card (role="status").
+       Enquanto espera, o botão fica desabilitado com o texto "Entrando…".
+       Em React/Next: onSubmit com preventDefault → await entrar(dados) →
+       router.push('/painel') ou setErro(...). (signIn() do NextAuth cabe aqui.)
+       ========================================================================= */
+    function entrar(dados) {
+      return Promise.resolve(null);   // ← sem requisição neste protótipo
+    }
+    function concluirEntrar(resultado) {
+      // ← trocar por: window.location.href = '/painel' (ou router.push)
+      avisoLogin.classList.remove('is-erro');
+      avisoLogin.textContent = 'Protótipo: o login ainda não está conectado ao sistema.';
+    }
+    function falharEntrar(erro) {
+      avisoLogin.classList.add('is-erro');
+      avisoLogin.textContent = 'Não foi possível entrar. Verifique o e-mail e a senha.';
+    }
+
+    if (formLogin) formLogin.addEventListener('submit', function (ev) {
+      ev.preventDefault();                                     // o JS controla o envio
+      var botao = formLogin.querySelector('button[type="submit"]');
+      var rotulo = botao.innerHTML;
+      botao.disabled = true; botao.textContent = 'Entrando…';
+      avisoLogin.textContent = '';
+      entrar({ email: formLogin.email.value.trim(), senha: formLogin.senha.value })
+        .then(concluirEntrar)
+        .catch(falharEntrar)
+        .then(function () { botao.disabled = false; botao.innerHTML = rotulo; });
+    });
 
     /* -------------------------------------------------------------------
        C) PULINHO DA MOEDA NA CARTEIRA
@@ -1165,14 +1334,19 @@
 
     /* -------------------------------------------------------------------
        LIGAÇÃO DOS BOTÕES
-       Qualquer elemento com data-moeda="meia" ou data-moeda="carteira" ganha a
-       animação correspondente. Para reaproveitar, basta marcar o botão.
+       data-acao="abrir-login" → abre o card de login (parte F).
+       data-moeda="carteira"   → pulinho da moeda da carteira (parte C).
+       Para reaproveitar, basta marcar o botão.
        ------------------------------------------------------------------- */
+    // Entrar (navbar) → troca a ilustração pelo card de login (parte F)
+    document.querySelectorAll('[data-acao="abrir-login"]').forEach(function (botao) {
+      botao.addEventListener('click', function (ev) { ev.preventDefault(); abrirLogin(botao); });
+    });
+
     document.querySelectorAll('[data-moeda]').forEach(function (link) {
       link.addEventListener('click', function (ev) {
         var tipo = link.getAttribute('data-moeda');
-        if (tipo === 'meia') aoClicarEntrar(ev, link);   // animação + login, nessa ordem de conclusão
-        else if (tipo === 'carteira') moedaNaCarteira(ev, link);
+        if (tipo === 'carteira') moedaNaCarteira(ev, link);
       });
     });
   })();
