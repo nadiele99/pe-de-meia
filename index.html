@@ -15,7 +15,8 @@
     7. Rodapé      → componente do DS
     8. <script>    → as interações, todas comentadas:
                      A) utilitários compartilhados (moeda SVG, checagens)
-                     B) MOEDINHAS DA MEIA  — clique na meia: sai uma moeda por clique
+                     B) MOEDINHAS DA MEIA  — clique na meia: sai uma moeda por clique;
+                        ao carregar a página, saem 2 sozinhas (B2)
                      C) PULINHO NA CARTEIRA — clique em [data-moeda="carteira"] ou na própria moeda
                      D) BOTÃO VOLTAR AO TOPO — aparece quando o Hero sai da tela
                      E) DICA DO CADEADO — Esc fecha a dica de acesso restrito
@@ -996,6 +997,21 @@
       }).then(function () { moeda.remove(); });   // ETAPA 4: limpa
     }
     if (meia) meia.addEventListener('click', soltarMoeda);
+
+    // B2) BOAS-VINDAS: ao carregar a página, a meia solta MOEDAS_AO_CARREGAR moedas
+    //     sozinha, uma a cada INTERVALO_BOAS_VINDAS ms. Começa depois de ESPERA_BOAS_VINDAS
+    //     ms, tempo para a arte terminar o fade-up de entrada. Só acontece se a meia
+    //     estiver visível na tela (ex.: não roda se a página abrir já rolada em #programa).
+    //     "Reduzir movimento" desliga, porque soltarMoeda() já não anima nesse caso.
+    var MOEDAS_AO_CARREGAR = 2, ESPERA_BOAS_VINDAS = 900, INTERVALO_BOAS_VINDAS = 380;
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        if (!meia) return;
+        var r = meia.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) return;   // meia fora da tela: não solta
+        for (var i = 0; i < MOEDAS_AO_CARREGAR; i++) setTimeout(soltarMoeda, i * INTERVALO_BOAS_VINDAS);
+      }, ESPERA_BOAS_VINDAS);
+    });
 
     /* -------------------------------------------------------------------
        F) LOGIN NO LUGAR DA ARTE — clique em "Entrar"  [data-acao="abrir-login"]
