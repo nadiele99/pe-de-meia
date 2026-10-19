@@ -4,6 +4,10 @@
   =============================================================================
   HOME · SISTEMA DE CONSULTA PÉ-DE-MEIA (Seduc-AM) · protótipo HTML
   =============================================================================
+  ESTE ARQUIVO É A REFERÊNCIA TÉCNICA COMPLETA DA PÁGINA. O README.md da pasta é só
+  a porta de entrada (o que é, como abrir, mapa de pastas) e aponta para cá.
+  Ao mudar a página, atualize os comentários AQUI; não duplique detalhes no README.
+
   COMO ESTE ARQUIVO ESTÁ ORGANIZADO
     1. <head>      → tokens + componentes do Design System, Tailwind e o CSS da página
     2. Navbar      → componente do DS; o botão "Entrar" troca a arte do hero pelo card de LOGIN
@@ -160,6 +164,9 @@
     soltarMoeda (B)            → onClick do MeiaBotao: cria a moeda (createElement ou lista de
                                   moedas no estado) e anima com element.animate() usando refs
                                   da meia e da camada .moedas. Sem trava: vários cliques = várias moedas.
+    boas-vindas (B2)           → useEffect ao montar: depois de 900ms (fim do fade-up), chama
+                                  soltarMoeda() 2x com 380ms de intervalo, só se a meia estiver
+                                  visível e sem "reduzir movimento". Limpar os timers no cleanup.
     abrirLogin / fecharLogin (F) → estado modo no HeroPalco ('arte' | 'login'). Navbar e
                                   HeroPalco estão em ramos diferentes: expor abrirLogin() por
                                   Context (ex.: LoginContext) ou por um store. Saída escalonada das
