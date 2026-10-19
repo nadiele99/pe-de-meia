@@ -4,6 +4,8 @@ Protótipo em HTML da página inicial do Sistema de Consulta Pé-de-Meia, que co
 
 > **A referência técnica completa está nos comentários do `index.html`.** Este README é só a porta de entrada. Para entender, converter ou reaproveitar qualquer parte (componentes, camadas, animações, interações, bibliotecas, imagens), leia o topo do `index.html`, a partir de **"GUIA DE PORTABILIDADE"**.
 
+> **Vai pedir para uma IA replicar esta home em outro projeto?** Use o texto pronto em `PROMPT-PARA-IA.md`.
+
 ## Como abrir
 
 Abra o `index.html` no navegador (dois cliques). Não há build. Precisa de internet para o Tailwind CSS (CDN) e para as fontes do Google.
